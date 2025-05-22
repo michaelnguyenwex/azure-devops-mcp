@@ -133,9 +133,9 @@ server.tool(
      "Creates a new Test Case work item in Azure DevOps.",
   { 
     title: z.string().describe("The title of the test case."),
-    areaPath: z.string().describe("The Area Path for the test case (e.g., 'MyProject\\Area\\Feature')."),
-    iterationPath: z.string().describe("The Iteration Path for the test case (e.g., 'MyProject\\Sprint 1')."),
-    steps: z.string().describe("Multi-line natural language string describing test steps. Each line can be an action or a validation. For validations, use 'Expected:' to denote the expected outcome."),
+    areaPath: z.string().optional().default("Health").describe("The Area Path for the test case (e.g., 'MyProject\\Area\\Feature')."),
+    iterationPath: z.string().optional().default("Health").describe("The Iteration Path for the test case (e.g., 'MyProject\\Sprint 1')."),
+    steps: z.string().optional().default("").describe("Multi-line natural language string describing test steps. Each line can be an action or a validation. For validations, use 'Expected:' to denote the expected outcome."),
     priority: z.number().optional().default(2).describe("Priority of the test case (1=High, 2=Medium, 3=Low, 4=Very Low). Defaults to 2."),
     assignedTo: z.string().optional().describe("The unique name or email of the user to assign the test case to (e.g., 'user@example.com'). Optional."),
     state: z.string().optional().default("Design").describe("The initial state of the test case (e.g., 'Design', 'Ready'). Defaults to 'Design'."),
