@@ -53,6 +53,81 @@ server.tool(
   }
 );
 
+// Helper function to format natural language steps into Azure DevOps XML
+function formatStepsToAzdoXml(naturalLanguageSteps: string): string {
+  function htmlEncode(str: string): string {
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&apos;');
+  }
+
+  const stepLines = naturalLanguageSteps.split('\n').filter(line => line.trim() !== '');
+  let stepIdCounter = 1; 
+  const stepXmls: string[] = [];
+  let maxStepId = 0;
+
+  for (const line of stepLines) {
+    const currentStepId = stepIdCounter++;
+    if (currentStepId > maxStepId) {
+      maxStepId = currentStepId;
+    }
+
+    let stepXml = '';
+    const encodedLine = htmlEncode(line);
+
+    // Determine step type (ActionStep or ValidateStep)
+    // Heuristic: if line contains "Verify", "Ensure", "Check", or "Expected:" (case-insensitive), it's a ValidateStep.
+    const validateKeywords = ["verify", "ensure", "check", "expected:"];
+    const isValidateStep = validateKeywords.some(keyword => line.toLowerCase().includes(keyword));
+
+    if (isValidateStep) {
+      let actionPart = encodedLine;
+      let expectedPart = htmlEncode("Result is as expected."); // Default expected result
+
+      const expectedMarker = "expected:";
+      const expectedIndex = line.toLowerCase().indexOf(expectedMarker);
+
+      if (expectedIndex !== -1) {
+        actionPart = htmlEncode(line.substring(0, expectedIndex).trim());
+        expectedPart = htmlEncode(line.substring(expectedIndex + expectedMarker.length).trim());
+      } else {
+        // If no explicit "Expected:", the whole line is the action, generic expected result is used.
+        actionPart = encodedLine; // Already encoded
+      }
+      
+      // Ensure expectedPart is not empty if derived from split
+      if (!expectedPart.trim() && expectedIndex !== -1) {
+        expectedPart = htmlEncode("Result is as expected.");
+      }
+
+      stepXml = 
+`<step id="${currentStepId}" type="ValidateStep">
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;${actionPart}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;${expectedPart}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <description/>
+</step>`;
+    } else {
+      // ActionStep
+      stepXml = 
+`<step id="${currentStepId}" type="ActionStep">
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;${encodedLine}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;&lt;BR/&gt;&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <description/>
+</step>`;
+    }
+    stepXmls.push(stepXml);
+  }
+
+  if (stepXmls.length === 0) {
+    return "<steps id=\"0\" last=\"0\"></steps>"; // Return empty steps if no lines provided
+  }
+
+  const joinedStepXmls = stepXmls.join('\n  '); // Join with newline and indent for readability if desired
+  return `<steps id="0" last="${maxStepId}">\n  ${joinedStepXmls}\n</steps>`;
+}
+
 server.tool(
     "create-test-case",
      "Creates a new Test Case work item in Azure DevOps.",
@@ -60,7 +135,7 @@ server.tool(
     title: z.string().describe("The title of the test case."),
     areaPath: z.string().describe("The Area Path for the test case (e.g., 'MyProject\\Area\\Feature')."),
     iterationPath: z.string().describe("The Iteration Path for the test case (e.g., 'MyProject\\Sprint 1')."),
-    steps: z.string().describe("XML string representing the test steps for Microsoft.VSTS.TCM.Steps."), // XML string for Microsoft.VSTS.TCM.Steps
+    steps: z.string().describe("Multi-line natural language string describing test steps. Each line can be an action or a validation. For validations, use 'Expected:' to denote the expected outcome."),
     priority: z.number().optional().default(2).describe("Priority of the test case (1=High, 2=Medium, 3=Low, 4=Very Low). Defaults to 2."),
     assignedTo: z.string().optional().describe("The unique name or email of the user to assign the test case to (e.g., 'user@example.com'). Optional."),
     state: z.string().optional().default("Design").describe("The initial state of the test case (e.g., 'Design', 'Ready'). Defaults to 'Design'."),
@@ -77,6 +152,9 @@ server.tool(
         throw new Error('Azure DevOps Personal Access Token not found in .env file');
       }    
       
+      // Convert natural language steps to XML
+      const formattedStepsXml = formatStepsToAzdoXml(steps);
+
       // Prepare the request body
       const requestBody = [
         {
@@ -97,7 +175,7 @@ server.tool(
         {
           "op": "add",
           "path": "/fields/Microsoft.VSTS.TCM.Steps",
-          "value": steps
+          "value": formattedStepsXml // Use the converted XML here
         },
         {
           "op": "add",
