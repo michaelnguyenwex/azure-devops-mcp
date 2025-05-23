@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import 'dotenv/config'
 import axios from 'axios';
-import { registerCreateTestCaseTool } from './testCaseUtils.js';
+import { registerCreateTestCaseTool, registerUpdateAutomatedTestTool } from './testCaseUtils.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -56,6 +56,9 @@ server.tool(
 
 //Register the create-test-case tool
 registerCreateTestCaseTool(server);
+
+// Register the update-automated-test tool
+registerUpdateAutomatedTestTool(server);
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
