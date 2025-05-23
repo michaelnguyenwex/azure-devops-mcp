@@ -3,8 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import 'dotenv/config'
 import axios from 'axios';
-import { registerCreateTestCaseTool, registerUpdateAutomatedTestTool } from './testCaseUtils.js';
-import { registerRegisterAzureProjectTool } from './projectConfigTool.js'; // Import the new registration function
+import { registerUpdateAutomatedTestTool, registerTestCaseFunc } from './testCaseUtils.js';
+import { registerAzureProjectTool } from './projectConfigTool.js'; // Import the new registration function
 import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
 
 // Create an MCP server
@@ -57,14 +57,13 @@ server.tool(
   }
 );
 
-//Register the create-test-case tool
-registerCreateTestCaseTool(server);
+registerTestCaseFunc(server);
 
 // Register the update-automated-test tool
 registerUpdateAutomatedTestTool(server);
 
 // Register the register-azure-project tool
-registerRegisterAzureProjectTool(server);
+registerAzureProjectTool(server);
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();

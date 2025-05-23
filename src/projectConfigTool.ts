@@ -12,7 +12,7 @@ const RegisterAzureProjectSchema = z.object({
  * Registers the 'register-azure-project' tool with the MCP server.
  * This tool sets the global Azure DevOps organization and project name for subsequent tool calls.
  */
-export function registerRegisterAzureProjectTool(server: McpServer) {
+export function registerAzureProjectTool(server: McpServer) {
   server.tool(
     "register-azure-project",
     "Sets the global Azure DevOps organization and project name for subsequent tool calls.",
