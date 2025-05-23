@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import 'dotenv/config'
 import axios from 'axios';
-import { registerUpdateAutomatedTestTool, registerTestCaseFunc } from './testCaseUtils.js';
+import { registerUpdateAutomatedTestTool, registerTestCaseFunc, createStaticTestSuite } from './testCaseUtils.js';
 import { registerAzureProjectTool } from './projectConfigTool.js'; // Import the new registration function
 import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
 
@@ -64,6 +64,8 @@ registerUpdateAutomatedTestTool(server);
 
 // Register the register-azure-project tool
 registerAzureProjectTool(server);
+
+createStaticTestSuite(server);
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();

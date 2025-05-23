@@ -104,24 +104,7 @@ async function getOrCreateStaticTestSuite(options: {
 
   const listSuitesUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${parentSuiteId}?api-version=7.0`;
 
-  try {
-    // 2.3: Implement logic to find existing suite
-    const listResponse = await axios.get(listSuitesUrl, {
-      headers: { 'Authorization': `Bearer ${pat}` }
-    });
-
-    if (listResponse.data && listResponse.data.value) {
-      const suites = listResponse.data.value;
-      for (const suite of suites) {
-        if (suite.name === suiteName && suite.suiteType === "StaticTestSuite") {
-          console.log(`Found existing static suite '${suiteName}' with ID: ${suite.id}`);
-          return suite.id;
-        }
-      }
-    }
-
-    // 2.4: Implement logic to create new suite if not found
-    console.log(`Static suite '${suiteName}' not found under parent suite ${parentSuiteId}. Creating new suite in project '${projectName}'.`);
+  try {    
     const createSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/suites?api-version=7.0`;
     const createSuiteBody = {
       suiteType: "StaticTestSuite",
@@ -247,6 +230,60 @@ const UpdateAutomatedTestSchema = z.object({
   automatedTestId: z.string().optional().describe("Optional. A unique ID for the automated test. If not provided, a new GUID will be generated."),
   automatedTestType: z.string().optional().default("Unit Test").describe("Optional. The type of the automated test. Defaults to \'Unit Test\'.")
 });
+
+/**
+ * Registers a tool to create a static test suite in Azure DevOps.
+ * This is an MCP wrapper around the getOrCreateStaticTestSuite function.
+ */
+export function createStaticTestSuite(server: McpServer) {
+  server.tool(
+    "create-static-testsuite",
+    "Creates a new Static Test Suite in Azure DevOps or finds an existing one with the same name.",
+    { 
+      planId: z.number().describe("The ID of the Test Plan."),
+      parentSuiteId: z.number().describe("The ID of the parent Test Suite."),
+      suiteName: z.string().describe("The name of the static test suite to create or find."),
+      pat: z.string().optional().describe("The Personal Access Token for Azure DevOps. If not provided, it will attempt to use AZDO_PAT environment variable.")
+    },
+    async ({ planId, parentSuiteId, suiteName, pat }) => {
+      try {
+        // Ensure PAT is available, either from params or environment
+        const effectivePat = pat || process.env.AZDO_PAT;
+        if (!effectivePat) {
+          return {
+            content: [{ 
+              type: "text", 
+              text: "Error: Azure DevOps Personal Access Token not provided (either in parameters or AZDO_PAT environment variable)." 
+            }]
+          };
+        }
+
+        // Call the underlying function
+        const suiteId = await getOrCreateStaticTestSuite({
+          planId,
+          parentSuiteId,
+          suiteName,
+          pat: effectivePat
+        });
+
+        return {
+          content: [{ 
+            type: "text", 
+            text: `Static test suite '${suiteName}' (ID: ${suiteId}) successfully created or found under parent suite ${parentSuiteId} in plan ${planId}.` 
+          }]
+        };
+      } catch (error) {
+        console.error('Error in create-static-testsuite tool:', error);
+        return {
+          content: [{ 
+            type: "text", 
+            text: `Error creating or finding static test suite: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }]
+        };
+      }
+    }
+  );
+}
 
 export function registerTestCaseFunc(server: McpServer) {
    server.tool(
