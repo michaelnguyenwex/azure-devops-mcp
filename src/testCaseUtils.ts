@@ -224,13 +224,14 @@ async function getOrCreateStaticTestSuite(options: {
   pat: string;
 }): Promise<number> {
   const { planId, parentSuiteId, suiteName, pat } = options;
-  
+
   let configFromStore;
   try {
     configFromStore = await getAzureDevOpsConfig();
   } catch (err) {
     // Propagate error if config is not set, or handle as appropriate for this utility
-    throw new Error(`Azure DevOps configuration not set. ${(err as Error).message}`);
+    // This ensures that if config is missing, the function fails early and clearly.
+    throw new Error(`Azure DevOps configuration not set. Please run 'register-azure-project'. Details: ${(err as Error).message}`);
   }
   const { organization, projectName } = configFromStore;
 
@@ -253,7 +254,7 @@ async function getOrCreateStaticTestSuite(options: {
     }
 
     // 2.4: Implement logic to create new suite if not found
-    console.log(`Static suite \'${suiteName}\' not found under parent suite ${parentSuiteId}. Creating new suite in ${projectName}.`);
+    console.log(`Static suite '${suiteName}' not found under parent suite ${parentSuiteId}. Creating new suite in project '${projectName}'.`);
     const createSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${parentSuiteId}/suites?api-version=7.0`;
     const createSuiteBody = {
       suiteType: "StaticTestSuite",
@@ -277,10 +278,13 @@ async function getOrCreateStaticTestSuite(options: {
   } catch (error) {
     // 2.5: Handle API responses and errors robustly
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`Error in getOrCreateStaticTestSuite for suite '${suiteName}':`, error);
-    // Consider if error.response.data exists and has more specific info
+    // Check if the error is from getAzureDevOpsConfig (already handled by the throw above, but good for general robustness)
+    if (errorMessage.startsWith('Azure DevOps configuration not set')) {
+        throw error; // Re-throw the specific config error
+    }
+    console.error(`Error in getOrCreateStaticTestSuite for suite '${suiteName}' in project '${projectName}':`, error);
     const azdoError = (error as any).response?.data?.message || errorMessage;
-    throw new Error(`Failed to find or create static suite '${suiteName}' under parent suite ${parentSuiteId}. Plan: ${planId}. Error: ${azdoError}`);
+    throw new Error(`Failed to find or create static suite '${suiteName}' under parent suite ${parentSuiteId}. Plan: ${planId}, Project: ${projectName}. Error: ${azdoError}`);
   }
 }
 
