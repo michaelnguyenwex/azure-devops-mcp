@@ -238,29 +238,29 @@
 ## 4. Story: Refactor `create-test-case` Tool to Use Global Configuration
 *   **Description:** Update the `create-test-case` tool to use the global Azure DevOps configuration, removing its own `projectName` parameter.
 *   **Sub-tasks:**
-    *   [ ] **4.1: Update Zod schema in `registerCreateTestCaseTool` (`src/testCaseUtils.ts`).**
-        *   [ ] Remove the `projectName` field: `projectName: z.string().optional().default(\\\"Health\\\").describe(...)`.
-    *   [ ] **4.2: Update handler parameters in `registerCreateTestCaseTool`.**
-        *   [ ] Remove `projectName` from the destructured parameters: `async ({ title, /* projectName, */ areaPath, ... })`.
-    *   [ ] **4.3: Modify `registerCreateTestCaseTool` handler logic.**
-        *   [ ] Import `getAzureDevOpsConfig` from `../configStore.js`.
-        *   [ ] At the beginning of the `try` block, add: `const { organization, projectName } = await getAzureDevOpsConfig();`.
-        *   [ ] Update `apiUrl` construction: `` `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3` ``.
-        *   [ ] In the section for adding test case to a suite (if `parentPlanId` and `parentSuiteId` are provided):
-            *   Ensure the `organization` variable used is from `getAzureDevOpsConfig`.
-            *   Ensure the `projectName` variable used for `addTcToSuiteUrl` is from `getAzureDevOpsConfig`.
-        *   [ ] Ensure the existing `catch (error)` block handles errors from `getAzureDevOpsConfig`.
+    *   [x] **4.1: Update Zod schema in `registerCreateTestCaseTool` (`src/testCaseUtils.ts`).**
+        *   [x] Remove the `projectName` field: `projectName: z.string().optional().default(\\\"Health\\\").describe(...)`.
+    *   [x] **4.2: Update handler parameters in `registerCreateTestCaseTool`.**
+        *   [x] Remove `projectName` from the destructured parameters: `async ({ title, /* projectName, */ areaPath, ... })`.
+    *   [x] **4.3: Modify `registerCreateTestCaseTool` handler logic.**
+        *   [x] Import `getAzureDevOpsConfig` from `../configStore.js`.
+        *   [x] At the beginning of the `try` block, add: `const { organization, projectName } = await getAzureDevOpsConfig();`.
+        *   [x] Update `apiUrl` construction: `` `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3` ``.
+        *   [x] In the section for adding test case to a suite (if `parentPlanId` and `parentSuiteId` are provided):
+            *   [x] Ensure the `organization` variable used is from `getAzureDevOpsConfig`.
+            *   [x] Ensure the `projectName` variable used for `addTcToSuiteUrl` is from `getAzureDevOpsConfig`.
+        *   [x] Ensure the existing `catch (error)` block handles errors from `getAzureDevOpsConfig`.
 
 ---
 
 ## 5. Story: Refactor `updateAutomatedTest` Function and Tool to Use Global Configuration
 *   **Description:** Adapt the `updateAutomatedTest` function and its MCP tool registration to use the global configuration, removing its specific `organization` and `projectName` parameters.
 *   **Sub-tasks:**
-    *   [ ] **5.1: Modify `updateAutomatedTest` function signature and logic in `src/testCaseUtils.ts`.**
-        *   [ ] Import `getAzureDevOpsConfig` from `../configStore.js`.
-        *   [ ] Remove `projectName?: string;` and `organization?: string;` from the `options` parameter type.
-        *   [ ] Remove `projectName = \\\"Health\\\"` and `organization = \\\"WexHealthTech\\\"` from the destructuring defaults within the function.
-        *   [ ] At the beginning of the function (before `if (!pat)`), add:
+    *   [x] **5.1: Modify `updateAutomatedTest` function signature and logic in `src/testCaseUtils.ts`.**
+        *   [x] Import `getAzureDevOpsConfig` from `../configStore.js`.
+        *   [x] Remove `projectName?: string;` and `organization?: string;` from the `options` parameter type.
+        *   [x] Remove `projectName = \"Health\"` and `organization = \"WexHealthTech\"` from the destructuring defaults within the function.
+        *   [x] At the beginning of the function (before `if (!pat)`), add:
             ```typescript
             let config;
             try {
@@ -270,12 +270,12 @@
             }
             const { organization, projectName } = config;
             ```
-        *   [ ] Ensure `apiUrl` uses these `organization` and `projectName`.
-    *   [ ] **5.2: Update `UpdateAutomatedTestSchema` Zod schema in `src/testCaseUtils.ts`.**
-        *   [ ] Remove `projectName: z.string().optional().default(\\\"Health\\\").describe(...)`.
-        *   [ ] Remove `organization: z.string().optional().default(\\\"WexHealthTech\\\").describe(...)`.
-    *   [ ] **5.3: Update `registerUpdateAutomatedTestTool` handler in `src/testCaseUtils.ts`.**
-        *   [ ] When constructing `optionsForUpdate`, do not pass `projectName` or `organization` as they are no longer parameters of `updateAutomatedTest`. The `updateAutomatedTest` function itself will now fetch them.
+        *   [x] Ensure `apiUrl` uses these `organization` and `projectName`.
+    *   [x] **5.2: Update `UpdateAutomatedTestSchema` Zod schema in `src/testCaseUtils.ts`.**
+        *   [x] Remove `projectName: z.string().optional().default(\"Health\").describe(...)`.
+        *   [x] Remove `organization: z.string().optional().default(\"WexHealthTech\").describe(...)`.
+    *   [x] **5.3: Update `registerUpdateAutomatedTestTool` handler in `src/testCaseUtils.ts`.**
+        *   [x] When constructing `optionsForUpdate`, do not pass `projectName` or `organization` as they are no longer parameters of `updateAutomatedTest`. The `updateAutomatedTest` function itself will now fetch them.
             Example modification:
             ```typescript
             const optionsForUpdate = {
@@ -289,7 +289,7 @@
               // organization: params.organization, // REMOVE
             };
             ```
-        *   [ ] The `updateAutomatedTest` function will handle the error if config is not set, so the tool wrapper doesn\'t need an explicit check for that beyond what `updateAutomatedTest` returns.
+        *   [x] The `updateAutomatedTest` function will handle the error if config is not set, so the tool wrapper doesn't need an explicit check for that beyond what `updateAutomatedTest` returns.
 
 ---
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 import axios from 'axios';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as crypto from 'crypto';
+import { getAzureDevOpsConfig } from './configStore.js'; // Corrected import path
 
 // Helper function to format natural language steps into Azure DevOps XML
 function formatStepsToAzdoXml(naturalLanguageSteps: string): string {
@@ -79,7 +80,6 @@ export function registerCreateTestCaseTool(server: McpServer) {
     "Creates a new Test Case work item in Azure DevOps. The test case is created in the 'Health' project.",
     { 
       title: z.string().describe("The title of the test case."),
-      projectName: z.string().optional().default("Health").describe("The name of the Azure DevOps project. Defaults to 'Health'."),
       areaPath: z.string().optional().default("Health").describe("The Area Path for the test case (e.g., 'MyProject\\\\\\\\Area\\\\\\\\Feature')."),
       iterationPath: z.string().optional().default("Health").describe("The Iteration Path for the test case (e.g., 'MyProject\\\\\\\\Sprint 1')."),
       steps: z.string().optional().default("").describe("Multi-line natural language string describing test steps. Each line can be an action or a validation. For validations, use 'Expected:' to denote the expected outcome."),
@@ -91,9 +91,10 @@ export function registerCreateTestCaseTool(server: McpServer) {
       parentPlanId: z.number().optional().describe("Optional. The ID of the Test Plan containing the parent suite. If provided with parentSuiteId, the test case will be added to this suite."),
       parentSuiteId: z.number().optional().describe("Optional. The ID of the parent Test Suite under which the test case will be added. Requires parentPlanId to be specified.")
     },
-    async ({ title, projectName, areaPath, iterationPath, steps, priority, assignedTo, state, reason, automationStatus, parentPlanId, parentSuiteId }) => {
+    async ({ title, areaPath, iterationPath, steps, priority, assignedTo, state, reason, automationStatus, parentPlanId, parentSuiteId }) => {
       try {
-        const apiUrl = `https://dev.azure.com/WexHealthTech/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3`;
+        const { organization, projectName } = await getAzureDevOpsConfig(); // Get config
+        const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3`;
         
         const pat = process.env.AZDO_PAT;
         if (!pat) {
@@ -170,7 +171,6 @@ export function registerCreateTestCaseTool(server: McpServer) {
 
         // Simplified logic: if parentPlanId and parentSuiteId are provided, add test case to that suite.
         if (parentPlanId && parentPlanId !== 0 && parentSuiteId && parentSuiteId !== 0) {
-          const organization = "WexHealthTech"; // Assuming this is constant or retrieved from config
           try {
             const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${parentPlanId}/Suites/${parentSuiteId}/testcases?api-version=7.0`;
             const addTcToSuiteBody = [{ id: createdTestCaseId.toString() }]; 
@@ -213,9 +213,7 @@ export function registerCreateTestCaseTool(server: McpServer) {
  * @param options.planId - The ID of the Test Plan.
  * @param options.parentSuiteId - The ID of the parent Test Suite.
  * @param options.suiteName - The name of the suite to find or create.
- * @param options.projectName - The name of the Azure DevOps project.
  * @param options.pat - The Personal Access Token for Azure DevOps.
- * @param options.organization - The Azure DevOps organization name.
  * @returns A Promise that resolves to the ID of the found or created test suite.
  * @throws An error if the suite cannot be found or created.
  */
@@ -223,11 +221,19 @@ async function getOrCreateStaticTestSuite(options: {
   planId: number;
   parentSuiteId: number;
   suiteName: string;
-  projectName: string;
   pat: string;
-  organization: string;
 }): Promise<number> {
-  const { planId, parentSuiteId, suiteName, projectName, pat, organization } = options;
+  const { planId, parentSuiteId, suiteName, pat } = options;
+  
+  let configFromStore;
+  try {
+    configFromStore = await getAzureDevOpsConfig();
+  } catch (err) {
+    // Propagate error if config is not set, or handle as appropriate for this utility
+    throw new Error(`Azure DevOps configuration not set. ${(err as Error).message}`);
+  }
+  const { organization, projectName } = configFromStore;
+
   const listSuitesUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${parentSuiteId}/suites?api-version=7.0`;
 
   try {
@@ -247,7 +253,7 @@ async function getOrCreateStaticTestSuite(options: {
     }
 
     // 2.4: Implement logic to create new suite if not found
-    console.log(`Static suite '${suiteName}' not found under parent suite ${parentSuiteId}. Creating new suite.`);
+    console.log(`Static suite \'${suiteName}\' not found under parent suite ${parentSuiteId}. Creating new suite in ${projectName}.`);
     const createSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${parentSuiteId}/suites?api-version=7.0`;
     const createSuiteBody = {
       suiteType: "StaticTestSuite",
@@ -285,10 +291,8 @@ async function getOrCreateStaticTestSuite(options: {
  * @param options.automatedTestName The fully qualified name of the automated test method (e.g., 'Namespace.ClassName.MethodName').
  * @param options.automatedTestStorage The name of the test assembly or DLL (e.g., 'MyProject.Tests.dll').
  * @param options.pat The Personal Access Token for Azure DevOps.
- * @param options.projectName Optional. The Azure DevOps project name. Defaults to 'Health'.
  * @param options.automatedTestId Optional. A unique ID for the automated test. If not provided, a new GUID will be generated.
  * @param options.automatedTestType Optional. The type of the automated test. Defaults to 'Unit Test'.
- * @param options.organization Optional. The Azure DevOps organization name. Defaults to 'WexHealthTech'.
  * @returns A promise that resolves to an object indicating success or failure, along with response data or error details.
  */
 export async function updateAutomatedTest(options: {
@@ -296,21 +300,25 @@ export async function updateAutomatedTest(options: {
   automatedTestName: string;
   automatedTestStorage: string;
   pat: string;
-  projectName?: string;
   automatedTestId?: string;
   automatedTestType?: string;
-  organization?: string;
 }): Promise<{ success: boolean; message: string; data?: any; errorDetails?: any }> {
   const {
     testCaseId,
     automatedTestName,
     automatedTestStorage,
     pat,
-    projectName = "Health",
     automatedTestId,
     automatedTestType = "Unit Test",
-    organization = "WexHealthTech",
   } = options;
+
+  let config;
+  try {
+    config = await getAzureDevOpsConfig();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
+  const { organization, projectName } = config;
 
   if (!pat) {
     // This check is more for robustness, assuming pat is usually validated by the caller or a tool wrapper.
@@ -359,13 +367,11 @@ export async function updateAutomatedTest(options: {
 // Schema for the update-automated-test tool
 const UpdateAutomatedTestSchema = z.object({
   testCaseId: z.number().describe("The ID of the Test Case work item to update."),
-  automatedTestName: z.string().describe("The fully qualified name of the automated test method (e.g., 'Namespace.ClassName.MethodName')."),
-  automatedTestStorage: z.string().describe("The name of the test assembly or DLL (e.g., 'MyProject.Tests.dll')."),
-  pat: z.string().optional().describe("The Personal Access Token for Azure DevOps. If not provided, it will attempt to use AZDO_PAT environment variable."), // Made optional here as the tool will resolve it
-  projectName: z.string().optional().default("Health").describe("The Azure DevOps project name. Defaults to 'Health'."),
+  automatedTestName: z.string().describe("The fully qualified name of the automated test method (e.g., \'Namespace.ClassName.MethodName\')."),
+  automatedTestStorage: z.string().describe("The name of the test assembly or DLL (e.g., \'MyProject.Tests.dll\')."),
+  pat: z.string().optional().describe("The Personal Access Token for Azure DevOps. If not provided, it will attempt to use AZDO_PAT environment variable."),
   automatedTestId: z.string().optional().describe("Optional. A unique ID for the automated test. If not provided, a new GUID will be generated."),
-  automatedTestType: z.string().optional().default("Unit Test").describe("Optional. The type of the automated test. Defaults to 'Unit Test'."),
-  organization: z.string().optional().default("WexHealthTech").describe("Optional. The Azure DevOps organization name. Defaults to 'WexHealthTech'.")
+  automatedTestType: z.string().optional().default("Unit Test").describe("Optional. The type of the automated test. Defaults to \'Unit Test\'.")
 });
 
 /**
@@ -393,10 +399,8 @@ export function registerUpdateAutomatedTestTool(server: McpServer) {
           automatedTestName: params.automatedTestName,
           automatedTestStorage: params.automatedTestStorage,
           pat: effectivePat, // Use the resolved PAT
-          projectName: params.projectName,
           automatedTestId: params.automatedTestId,
           automatedTestType: params.automatedTestType,
-          organization: params.organization,
         };
 
         const result = await updateAutomatedTest(optionsForUpdate);
