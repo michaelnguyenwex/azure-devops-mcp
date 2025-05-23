@@ -88,8 +88,8 @@ export function registerCreateTestCaseTool(server: McpServer) {
       state: z.string().optional().default("Design").describe("The initial state of the test case (e.g., 'Design', 'Ready'). Defaults to 'Design'."),
       reason: z.string().optional().default("New").describe("The reason for the initial state (e.g., 'New', 'Test Case created'). Defaults to 'New'."),
       automationStatus: z.string().optional().default("Not Automated").describe("The automation status of the test case (e.g., 'Not Automated', 'Automated', 'Planned'). Defaults to 'Not Automated'."),
-      parentPlanId: z.number().optional().describe("Optional. The ID of the Test Plan containing the parent suite. If provided with parentSuiteId, the test case will be added to this suite."),
-      parentSuiteId: z.number().optional().describe("Optional. The ID of the parent Test Suite under which the test case will be added. Requires parentPlanId to be specified.")
+      parentPlanId: z.number().optional().describe("Optional. The ID of the Test Plan. If provided with `parentSuiteId`, a new child test suite (named after the test case title) will be created under the specified `parentSuiteId`, and the test case will be added to this new child suite."),
+      parentSuiteId: z.number().optional().describe("Optional. The ID of the parent Test Suite. If provided with `parentPlanId`, a new child test suite (named after the test case title) will be created under this suite, and the test case will be added to this new child suite.")
     },
     async ({ title, areaPath, iterationPath, steps, priority, assignedTo, state, reason, automationStatus, parentPlanId, parentSuiteId }) => {
       try {
@@ -169,21 +169,50 @@ export function registerCreateTestCaseTool(server: McpServer) {
             messageParts.push(`View at: ${response.data._links.html.href}.`);
         }
 
-        // Simplified logic: if parentPlanId and parentSuiteId are provided, add test case to that suite.
+        // Logic for creating a child suite and adding the test case to it
         if (parentPlanId && parentPlanId !== 0 && parentSuiteId && parentSuiteId !== 0) {
+          let newlyCreatedChildSuiteId: number | undefined;
+          const childSuiteName = title; // Use test case title for the child suite name
+          let suiteOperationMessage = "";
+
           try {
-            const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${parentPlanId}/Suites/${parentSuiteId}/testcases?api-version=7.0`;
-            const addTcToSuiteBody = [{ id: createdTestCaseId.toString() }]; 
-            await axios.post(addTcToSuiteUrl, addTcToSuiteBody, {
-              headers: {
-                'Authorization': `Bearer ${pat}`,
-                'Content-Type': 'application/json'
-              }
+            const { organization, projectName } = await getAzureDevOpsConfig(); // Ensure config is fetched here as well for this block
+            const pat = process.env.AZDO_PAT; // Ensure PAT is available
+            if (!pat) {
+              throw new Error('Azure DevOps Personal Access Token not found for child suite operations.');
+            }
+
+            newlyCreatedChildSuiteId = await getOrCreateStaticTestSuite({
+              planId: parentPlanId,
+              parentSuiteId: parentSuiteId, // This is the PARENT of the new child suite
+              suiteName: childSuiteName,
+              pat: pat
             });
-            messageParts.push(`Test case added to suite ${parentSuiteId} in plan ${parentPlanId}.`);
-          } catch (addError) {
-            const addErrorMessage = addError instanceof Error ? addError.message : 'Unknown error';
-            messageParts.push(`Failed to add test case to suite ${parentSuiteId} in plan ${parentPlanId}: ${addErrorMessage}.`);
+            suiteOperationMessage = `Child suite '${childSuiteName}' (ID: ${newlyCreatedChildSuiteId}) ensured under parent suite ${parentSuiteId}.`;
+
+            if (newlyCreatedChildSuiteId) {
+              try {
+                // Add the created test case to the NEWLY CREATED CHILD suite
+                const addChildTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${parentPlanId}/Suites/${newlyCreatedChildSuiteId}/testcases?api-version=7.0`;
+                const addChildTcToSuiteBody = [{ id: createdTestCaseId.toString() }];
+                await axios.post(addChildTcToSuiteUrl, addChildTcToSuiteBody, {
+                  headers: {
+                    'Authorization': `Bearer ${pat}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                suiteOperationMessage += ` Test case ${createdTestCaseId} added to child suite ${newlyCreatedChildSuiteId}.`;
+              } catch (addChildError) {
+                const addChildErrorMessage = addChildError instanceof Error ? addChildError.message : 'Unknown error';
+                suiteOperationMessage += ` Failed to add test case ${createdTestCaseId} to child suite ${newlyCreatedChildSuiteId}: ${addChildErrorMessage}.`;
+              }
+            }
+          } catch (suiteError) {
+            const suiteErrorMessage = suiteError instanceof Error ? suiteError.message : 'Unknown error';
+            suiteOperationMessage = `Failed to create/retrieve child suite '${childSuiteName}' under parent suite ${parentSuiteId}: ${suiteErrorMessage}. Test case ${createdTestCaseId} not added to any new child suite.`;
+          }
+          if (suiteOperationMessage) {
+            messageParts.push(suiteOperationMessage);
           }
         }
         

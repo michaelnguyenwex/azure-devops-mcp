@@ -39,12 +39,12 @@
               }
             }
             ```
-    *   [ ] **1.4: Implement logic for conditional child suite creation and adding test case to it:**
-        *   [ ] After the test case is successfully created (e.g., `newTestCaseId = response.data.id`):
-        *   [ ] Define a variable `let actualNewTestSuiteName: string | undefined;`
-        *   [ ] Define a variable `let newlyCreatedSuiteId: number | undefined;`
-        *   [ ] **Condition for suite operations:** Check if `parentPlanId && parentPlanId !== 0 && parentSuiteId && parentSuiteId !== 0 && relatedWorkItemId && relatedWorkItemId !== 0`.
-        *   [ ] **If the above condition is true:**
+    *   [x] **1.4: Implement logic for conditional child suite creation and adding test case to it:**
+        *   [x] After the test case is successfully created (e.g., `newTestCaseId = response.data.id`):
+        *   [x] Define a variable `let actualNewTestSuiteName: string | undefined;`
+        *   [x] Define a variable `let newlyCreatedSuiteId: number | undefined;`
+        *   [x] **Condition for suite operations:** Check if `parentPlanId && parentPlanId !== 0 && parentSuiteId && parentSuiteId !== 0 && relatedWorkItemId && relatedWorkItemId !== 0`.
+        *   [x] **If the above condition is true:**
             *   [X] **Fetch Title of `relatedWorkItemId`:**
                 *   [X] Retrieve `pat` (Azure DevOps PAT), `projectName`, `organization`.
                 *   [X] Construct API URL: `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${relatedWorkItemId}?api-version=7.1-preview.3` (or latest stable).
@@ -72,16 +72,10 @@
                 *   [X] Handle success/failure of this "add to suite" API call (log appropriately).
         *   [X] **If the condition for suite operations is false** (i.e., any of `parentPlanId`, `parentSuiteId`, `relatedWorkItemId` are 0, undefined, or not all present as required):
             *   [X] Skip all suite creation and "add to suite" logic.
-    *   [X] **1.5: Update tool's return message:**
-        *   [X] Modify the `content` array in the `return` statement to provide comprehensive feedback based on outcomes:
-            *   [X] Base message: Test case creation status (ID if successful).
-            *   [X] If `relatedWorkItemId` was processed: "Linked to work item X." or "Failed to link to work item X: error."
-            *   [X] If suite operations were attempted:
-                *   [X] If `actualNewTestSuiteName` couldn't be fetched: "Could not fetch title for related work item Y, skipping child suite creation."
-                *   [X] If `getOrCreateStaticTestSuite` failed: "Successfully created test case Z. Failed to create/find child suite '${actualNewTestSuiteName}': error."
-                *   [X] If suite created/found but adding TC failed: "Successfully created test case Z. Child suite '${actualNewTestSuiteName}' (ID: ${newlyCreatedSuiteId}) processed. Failed to add test case to this suite: error."
-                *   [X] If all suite steps successful: "Successfully created test case Z. Child suite '${actualNewTestSuiteName}' (ID: ${newlyCreatedSuiteId}) processed, and test case added to it."
-    *   [X] **1.6: Documentation & Comments:**
+    *   [x] **1.5: Integrate the `suiteOperationMessage` into the tool's response, ensuring all success/failure scenarios for child suite creation and test case addition are clearly communicated.**
+    *   [x] **1.6: Remove or comment out the old logic that adds the test case directly to `parentSuiteId` when `parentPlanId` and `parentSuiteId` are provided (this is now handled by adding to the new child suite).**
+    *   [x] **1.7: Review and update the Zod schema descriptions for `parentPlanId` and `parentSuiteId` in `registerCreateTestCaseTool` to accurately reflect their role in the new child suite creation process.**
+    *   [X] **1.8: Documentation & Comments:**
         *   [X] Update JSDoc for `relatedWorkItemId`, `parentPlanId`, `parentSuiteId` in Zod schema.
         *   [X] Add inline comments for new logic: fetching work item title, conditional suite creation, linking work item.
 
