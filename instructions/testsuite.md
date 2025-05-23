@@ -177,3 +177,150 @@
         *   [X] Add inline comments for complex logic or API interactions.
 
 ---
+
+# Feature: Global Azure DevOps Project Configuration
+
+**Overall Goal:** Implement a mechanism to set and use global Azure DevOps `organization` and `projectName` values for all relevant tool calls, reducing redundant parameter passing and ensuring consistency. This involves creating a new tool to set these global values and refactoring existing tools to use them.
+
+---
+
+## 1. Story: Implement Global Configuration for Azure DevOps Project Details
+*   **Description:** Create a new module to store and manage the global Azure DevOps configuration (organization and project name).
+*   **Sub-tasks:**
+    *   [ ] **1.1: Create `src/configStore.ts` module.**
+        *   [ ] Create a new file named `configStore.ts` in the `src` directory.
+        *   [ ] Define a private module-level variable (e.g., `let currentConfig: { organization?: string; projectName?: string } = {};`).
+    *   [ ] **1.2: Implement `setAzureDevOpsConfig` function in `src/configStore.ts`.**
+        *   [ ] Define and export an asynchronous function `setAzureDevOpsConfig(config: { organization: string; projectName: string }): Promise<void>`.
+        *   [ ] This function should update `currentConfig` with the provided `organization` and `projectName`.
+        *   [ ] Add JSDoc comments explaining its purpose and parameters.
+    *   [ ] **1.3: Implement `getAzureDevOpsConfig` function in `src/configStore.ts`.**
+        *   [ ] Define and export an asynchronous function `getAzureDevOpsConfig(): Promise<{ organization: string; projectName: string }>`.
+        *   [ ] This function should check if `currentConfig.organization` and `currentConfig.projectName` are set.
+        *   [ ] If both are set, it should return them.
+        *   [ ] If either is not set, it should throw an error: `new Error(\\\"Azure DevOps project configuration is not set. Please run the \'register-azure-project\' tool to set it up.\\\")`.
+        *   [ ] Add JSDoc comments explaining its purpose, return value, and potential errors.
+
+---
+
+## 2. Story: Create `register-azure-project` MCP Tool
+*   **Description:** Develop a new MCP tool that allows users to set the global Azure DevOps organization and project name.
+*   **Sub-tasks:**
+    *   [X] **2.1: Define Zod schema for `register-azure-project` tool.**
+        *   [X] This can be in `src/testCaseUtils.ts` or a new dedicated file like `src/projectConfigTool.ts`. If a new file, ensure it's created.
+        *   [X] Create `const RegisterAzureProjectSchema = z.object({ organization: z.string().describe(\"The Azure DevOps organization name (e.g., 'WexHealthTech').\"), projectName: z.string().describe(\"The Azure DevOps project name (e.g., 'Health').\") });`.
+    *   [X] **2.2: Implement `registerRegisterAzureProjectTool` function in the same file as the schema.**
+        *   [X] Import `setAzureDevOpsConfig` from `../configStore.js` (adjust path if schema is in a new file).
+        *   [X] Define and export `export function registerRegisterAzureProjectTool(server: McpServer)`.
+        *   [X] Inside, call `server.tool(\"register-azure-project\", \"Sets the global Azure DevOps organization and project name for subsequent tool calls.\", RegisterAzureProjectSchema.shape, async (params: z.infer<typeof RegisterAzureProjectSchema>) => { ... });`.
+        *   [X] The async handler should:
+            *   [X] Call `await setAzureDevOpsConfig({ organization: params.organization, projectName: params.projectName });`.
+            *   [X] Return a success message: `{ content: [{ type: \"text\", text: \`Azure DevOps configuration set successfully to Organization: ${params.organization}, Project: ${params.projectName}\` }] }`.
+            *   [X] Include a `try...catch` block for error handling, returning an error message if `setAzureDevOpsConfig` fails.
+    *   [X] **2.3: Register the new tool in `src/index.ts`.**
+        *   [X] Import `registerRegisterAzureProjectTool` from its location (e.g., `./testCaseUtils.js` or `./projectConfigTool.js`).
+        *   [X] Call `registerRegisterAzureProjectTool(server);` before `server.connect(transport);`.
+
+---
+
+## 3. Story: Refactor `fetch-item` Tool to Use Global Configuration
+*   **Description:** Modify the existing `fetch-item` tool to utilize the globally configured Azure DevOps organization and project name.
+*   **Sub-tasks:**
+    *   [x] **3.1: Modify `fetch-item` tool in `src/index.ts`.**
+        *   [x] Import `getAzureDevOpsConfig` from `./configStore.js`.
+        *   [x] In the `async ({ azdoId })` handler, before constructing `apiUrl` (and inside the `try` block):
+            *   [x] Add `const { organization, projectName } = await getAzureDevOpsConfig();`.
+            *   [x] Update `apiUrl` to use these retrieved `organization` and `projectName` variables: `` `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${azdoId}?api-version=7.1-preview.3&$expand=relations` ``.
+        *   [x] Ensure the existing `catch (error)` block in `fetch-item` correctly handles potential errors from `getAzureDevOpsConfig` (e.g., by displaying the error message from the thrown error).
+
+---
+
+## 4. Story: Refactor `create-test-case` Tool to Use Global Configuration
+*   **Description:** Update the `create-test-case` tool to use the global Azure DevOps configuration, removing its own `projectName` parameter.
+*   **Sub-tasks:**
+    *   [ ] **4.1: Update Zod schema in `registerCreateTestCaseTool` (`src/testCaseUtils.ts`).**
+        *   [ ] Remove the `projectName` field: `projectName: z.string().optional().default(\\\"Health\\\").describe(...)`.
+    *   [ ] **4.2: Update handler parameters in `registerCreateTestCaseTool`.**
+        *   [ ] Remove `projectName` from the destructured parameters: `async ({ title, /* projectName, */ areaPath, ... })`.
+    *   [ ] **4.3: Modify `registerCreateTestCaseTool` handler logic.**
+        *   [ ] Import `getAzureDevOpsConfig` from `../configStore.js`.
+        *   [ ] At the beginning of the `try` block, add: `const { organization, projectName } = await getAzureDevOpsConfig();`.
+        *   [ ] Update `apiUrl` construction: `` `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3` ``.
+        *   [ ] In the section for adding test case to a suite (if `parentPlanId` and `parentSuiteId` are provided):
+            *   Ensure the `organization` variable used is from `getAzureDevOpsConfig`.
+            *   Ensure the `projectName` variable used for `addTcToSuiteUrl` is from `getAzureDevOpsConfig`.
+        *   [ ] Ensure the existing `catch (error)` block handles errors from `getAzureDevOpsConfig`.
+
+---
+
+## 5. Story: Refactor `updateAutomatedTest` Function and Tool to Use Global Configuration
+*   **Description:** Adapt the `updateAutomatedTest` function and its MCP tool registration to use the global configuration, removing its specific `organization` and `projectName` parameters.
+*   **Sub-tasks:**
+    *   [ ] **5.1: Modify `updateAutomatedTest` function signature and logic in `src/testCaseUtils.ts`.**
+        *   [ ] Import `getAzureDevOpsConfig` from `../configStore.js`.
+        *   [ ] Remove `projectName?: string;` and `organization?: string;` from the `options` parameter type.
+        *   [ ] Remove `projectName = \\\"Health\\\"` and `organization = \\\"WexHealthTech\\\"` from the destructuring defaults within the function.
+        *   [ ] At the beginning of the function (before `if (!pat)`), add:
+            ```typescript
+            let config;
+            try {
+              config = await getAzureDevOpsConfig();
+            } catch (err) {
+              return { success: false, message: (err as Error).message };
+            }
+            const { organization, projectName } = config;
+            ```
+        *   [ ] Ensure `apiUrl` uses these `organization` and `projectName`.
+    *   [ ] **5.2: Update `UpdateAutomatedTestSchema` Zod schema in `src/testCaseUtils.ts`.**
+        *   [ ] Remove `projectName: z.string().optional().default(\\\"Health\\\").describe(...)`.
+        *   [ ] Remove `organization: z.string().optional().default(\\\"WexHealthTech\\\").describe(...)`.
+    *   [ ] **5.3: Update `registerUpdateAutomatedTestTool` handler in `src/testCaseUtils.ts`.**
+        *   [ ] When constructing `optionsForUpdate`, do not pass `projectName` or `organization` as they are no longer parameters of `updateAutomatedTest`. The `updateAutomatedTest` function itself will now fetch them.
+            Example modification:
+            ```typescript
+            const optionsForUpdate = {
+              testCaseId: params.testCaseId,
+              automatedTestName: params.automatedTestName,
+              automatedTestStorage: params.automatedTestStorage,
+              pat: effectivePat, // Use the resolved PAT
+              // projectName: params.projectName, // REMOVE
+              automatedTestId: params.automatedTestId,
+              automatedTestType: params.automatedTestType,
+              // organization: params.organization, // REMOVE
+            };
+            ```
+        *   [ ] The `updateAutomatedTest` function will handle the error if config is not set, so the tool wrapper doesn\'t need an explicit check for that beyond what `updateAutomatedTest` returns.
+
+---
+
+## 6. Story: Refactor `getOrCreateStaticTestSuite` Function (Conditional)
+*   **Description:** Update the `getOrCreateStaticTestSuite` utility function to use global configuration, if it\'s determined to still be in use.
+*   **Sub-tasks:**
+    *   [ ] **6.1: Assess if `getOrCreateStaticTestSuite` in `src/testCaseUtils.ts` is still used or needed.**
+        *   [ ] If it was only used by the `create-test-case` logic that was recently removed (related to `relatedWorkItemId`), and has no other callers, consider removing the function entirely. If so, mark sub-tasks 6.2-6.4 as N/A and skip them.
+        *   [ ] If it is still used or intended as a general utility: proceed with refactoring.
+    *   [ ] **6.2: Modify `getOrCreateStaticTestSuite` function signature (if kept).**
+        *   [ ] Import `getAzureDevOpsConfig` from `../configStore.js`.
+        *   [ ] Remove `projectName: string;` and `organization: string;` from its `options` parameter type.
+    *   [ ] **6.3: Modify `getOrCreateStaticTestSuite` function logic (if kept).**
+        *   [ ] Remove `projectName` and `organization` from the destructuring: `const { planId, parentSuiteId, suiteName, pat /*, projectName, organization */ } = options;`.
+        *   [ ] At the beginning of the `try` block, add: `const { organization, projectName } = await getAzureDevOpsConfig();`.
+        *   [ ] Ensure `listSuitesUrl` and `createSuiteUrl` use these retrieved `organization` and `projectName`.
+        *   [ ] Ensure the existing `catch (error)` block handles errors from `getAzureDevOpsConfig`.
+    *   [ ] **6.4: Update all callers of `getOrCreateStaticTestSuite` (if kept and refactored).**
+        *   [ ] Ensure no callers are still trying to pass `organization` or `projectName`. (Verify if any callers remain).
+
+---
+
+## 7. Story: Review and Test
+*   **Description:** Perform a final review of all changes and test the new global configuration workflow.
+*   **Sub-tasks:**
+    *   [ ] **7.1: Review all modified files for consistency and correctness.**
+        *   [ ] Check that all `import` statements for `getAzureDevOpsConfig` and `setAzureDevOpsConfig` point to `../configStore.js` or `./configStore.js` correctly based on file location.
+        *   [ ] Ensure error handling for missing configuration is consistent (i.e., tools/functions either throw or return a clear error message that prompts the user to run `register-azure-project`).
+    *   [ ] **7.2: (Manual) Test the workflow:**
+        *   [ ] Attempt to run `fetch-item`, `create-test-case`, or `update-automated-test` *before* running `register-azure-project`. Verify they return an error message prompting to set the configuration.
+        *   [ ] Run `register-azure-project` with valid `organization` and `projectName`. Verify success message.
+        *   [ ] Re-run `fetch-item`, `create-test-case`, and `update-automated-test`. Verify they now work correctly using the globally set configuration.
+    *   [ ] **7.3: Run `npm run build` to check for any TypeScript compilation errors.**
+        *   [ ] Resolve any build errors.

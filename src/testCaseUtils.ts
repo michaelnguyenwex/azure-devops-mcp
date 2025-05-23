@@ -88,7 +88,6 @@ export function registerCreateTestCaseTool(server: McpServer) {
       state: z.string().optional().default("Design").describe("The initial state of the test case (e.g., 'Design', 'Ready'). Defaults to 'Design'."),
       reason: z.string().optional().default("New").describe("The reason for the initial state (e.g., 'New', 'Test Case created'). Defaults to 'New'."),
       automationStatus: z.string().optional().default("Not Automated").describe("The automation status of the test case (e.g., 'Not Automated', 'Automated', 'Planned'). Defaults to 'Not Automated'."),
-      // relatedWorkItemId, parentPlanId, parentSuiteId removed as per request
       parentPlanId: z.number().optional().describe("Optional. The ID of the Test Plan containing the parent suite. If provided with parentSuiteId, the test case will be added to this suite."),
       parentSuiteId: z.number().optional().describe("Optional. The ID of the parent Test Suite under which the test case will be added. Requires parentPlanId to be specified.")
     },

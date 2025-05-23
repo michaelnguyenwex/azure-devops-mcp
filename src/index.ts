@@ -4,6 +4,8 @@ import { z } from "zod";
 import 'dotenv/config'
 import axios from 'axios';
 import { registerCreateTestCaseTool, registerUpdateAutomatedTestTool } from './testCaseUtils.js';
+import { registerRegisterAzureProjectTool } from './projectConfigTool.js'; // Import the new registration function
+import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
 
 // Create an MCP server
 const server = new McpServer({
@@ -18,7 +20,8 @@ server.tool(
   { azdoId: z.number()},
   async ({ azdoId }) => {
     try {
-      const apiUrl = `https://dev.azure.com/WexHealthTech/Health/_apis/wit/workitems/${azdoId}?api-version=7.1-preview.3&$expand=relations`;
+      const { organization, projectName } = await getAzureDevOpsConfig(); // Get config
+      const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${azdoId}?api-version=7.1-preview.3&$expand=relations`;
       
       // Get the Personal Access Token from .env file
       const pat = process.env.AZDO_PAT;
@@ -59,6 +62,9 @@ registerCreateTestCaseTool(server);
 
 // Register the update-automated-test tool
 registerUpdateAutomatedTestTool(server);
+
+// Register the register-azure-project tool
+registerRegisterAzureProjectTool(server);
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
