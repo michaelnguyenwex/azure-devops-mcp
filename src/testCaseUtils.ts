@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { string, z } from "zod";
 import axios from 'axios';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as crypto from 'crypto';
@@ -285,6 +285,59 @@ export function createStaticTestSuite(server: McpServer) {
   );
 }
 
+export function addTestCaseToTestSuite(server: McpServer) {
+  server.tool(
+    "add-testcase-to-testsuite",
+    "Add test case to test suite.",
+    { 
+      testCaseId: z.number().describe("The ID of the Test Case."),
+      planId: z.number().describe("The ID of the Test Plan."),
+      suiteId: z.number().describe("The ID of the Test Suite."),      
+    },
+    async ({ testCaseId, planId, suiteId }) => {
+      try {
+        const { organization, projectName } = await getAzureDevOpsConfig(); // Get config
+        
+        const pat = process.env.AZDO_PAT;
+        if (!pat) {
+          throw new Error('Azure DevOps Personal Access Token not found in .env file');
+        } 
+
+        var suiteOperationMessage: string = "";
+        try {
+                // Add the created test case to the NEWLY CREATED CHILD suite
+                const addChildTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${testCaseId}?api-version=7.0`;
+                await axios.post(addChildTcToSuiteUrl, {
+                  headers: {
+                    'Authorization': `Bearer ${pat}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                suiteOperationMessage += ` Test case ${testCaseId} added to child suite ${suiteId}.`;
+              } catch (addChildError) {
+                const addChildErrorMessage = addChildError instanceof Error ? addChildError.message : 'Unknown error';
+                suiteOperationMessage += ` Failed to add test case ${testCaseId} to child suite ${suiteId}: ${addChildErrorMessage}.`;
+              }
+
+        return {
+          content: [{ 
+            type: "text", 
+            text: suiteOperationMessage
+          }]
+        };
+      } catch (error) {
+        console.error('Error in create-static-testsuite tool:', error);
+        return {
+          content: [{ 
+            type: "text", 
+            text: `Error creating or finding static test suite: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }]
+        };
+      }
+    }
+  );
+}
+
 export function registerTestCaseFunc(server: McpServer) {
    server.tool(
     "create-testcase",
@@ -404,7 +457,8 @@ export function registerTestCaseFunc(server: McpServer) {
             if (newlyCreatedChildSuiteId) {
               try {
                 // Add the created test case to the NEWLY CREATED CHILD suite
-                const addChildTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${parentPlanId}/Suites/${newlyCreatedChildSuiteId}/testcases?api-version=7.0`;
+                const addChildTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${parentPlanId}/Suites/${newlyCreatedChildSuiteId}/testcases/${createdTestCaseId}?api-version=7.0`;
+                                
                 const addChildTcToSuiteBody = [{ id: createdTestCaseId.toString() }];
                 await axios.post(addChildTcToSuiteUrl, addChildTcToSuiteBody, {
                   headers: {
