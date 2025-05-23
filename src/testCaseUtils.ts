@@ -80,20 +80,19 @@ export function registerCreateTestCaseTool(server: McpServer) {
     { 
       title: z.string().describe("The title of the test case."),
       projectName: z.string().optional().default("Health").describe("The name of the Azure DevOps project. Defaults to 'Health'."),
-      areaPath: z.string().optional().default("Health").describe("The Area Path for the test case (e.g., 'MyProject\\\\Area\\\\Feature')."),
-      iterationPath: z.string().optional().default("Health").describe("The Iteration Path for the test case (e.g., 'MyProject\\\\Sprint 1')."),
+      areaPath: z.string().optional().default("Health").describe("The Area Path for the test case (e.g., 'MyProject\\\\\\\\Area\\\\\\\\Feature')."),
+      iterationPath: z.string().optional().default("Health").describe("The Iteration Path for the test case (e.g., 'MyProject\\\\\\\\Sprint 1')."),
       steps: z.string().optional().default("").describe("Multi-line natural language string describing test steps. Each line can be an action or a validation. For validations, use 'Expected:' to denote the expected outcome."),
       priority: z.number().optional().default(2).describe("Priority of the test case (1=High, 2=Medium, 3=Low, 4=Very Low). Defaults to 2."),
       assignedTo: z.string().optional().describe("The unique name or email of the user to assign the test case to (e.g., 'user@example.com'). Optional."),
       state: z.string().optional().default("Design").describe("The initial state of the test case (e.g., 'Design', 'Ready'). Defaults to 'Design'."),
       reason: z.string().optional().default("New").describe("The reason for the initial state (e.g., 'New', 'Test Case created'). Defaults to 'New'."),
       automationStatus: z.string().optional().default("Not Automated").describe("The automation status of the test case (e.g., 'Not Automated', 'Automated', 'Planned'). Defaults to 'Not Automated'."),
-      // JSDoc for relatedWorkItemId, parentPlanId, parentSuiteId updated as per Task 1.6
-      relatedWorkItemId: z.number().optional().describe("Optional. The ID of an existing work item (e.g., User Story, Bug) that this test case is intended to test. If provided and not 0, a 'Tests' link will be added from the test case to this work item. This ID is also used to name a new child test suite if parentPlanId and parentSuiteId are also provided."),
-      parentPlanId: z.number().optional().describe("Optional. The ID of the Test Plan under which a new child test suite might be created. Required (non-zero) along with parentSuiteId and relatedWorkItemId to trigger child suite creation."),
-      parentSuiteId: z.number().optional().describe("Optional. The ID of the parent Test Suite under which a new child test suite (named after the relatedWorkItemId's title) will be created. Required (non-zero) along with parentPlanId and relatedWorkItemId to trigger child suite creation.")
+      // relatedWorkItemId, parentPlanId, parentSuiteId removed as per request
+      parentPlanId: z.number().optional().describe("Optional. The ID of the Test Plan containing the parent suite. If provided with parentSuiteId, the test case will be added to this suite."),
+      parentSuiteId: z.number().optional().describe("Optional. The ID of the parent Test Suite under which the test case will be added. Requires parentPlanId to be specified.")
     },
-    async ({ title, projectName, areaPath, iterationPath, steps, priority, assignedTo, state, reason, automationStatus, relatedWorkItemId, parentPlanId, parentSuiteId }) => {
+    async ({ title, projectName, areaPath, iterationPath, steps, priority, assignedTo, state, reason, automationStatus, parentPlanId, parentSuiteId }) => {
       try {
         const apiUrl = `https://dev.azure.com/WexHealthTech/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3`;
         
@@ -155,24 +154,6 @@ export function registerCreateTestCaseTool(server: McpServer) {
           });
         }
 
-        // If relatedWorkItemId is provided, add a link from the test case to this work item.
-        if (relatedWorkItemId && relatedWorkItemId !== 0) {
-          const organization = "WexHealthTech"; // Assuming this is constant or retrieved from config
-          const workItemUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${relatedWorkItemId}`;
-          requestBody.push({
-            "op": "add",
-            "path": "/relations/-",
-            "value": {
-              "rel": "Microsoft.VSTS.Common.TestedBy-Reverse",
-              "url": workItemUrl,
-              "attributes": {
-                "isLocked": false,
-                "name": "Tests"
-              }
-            }
-          });
-        }
-        
         const response = await axios.post(apiUrl, requestBody, {
           headers: {
             'Authorization': `Bearer ${pat}`,
@@ -181,7 +162,6 @@ export function registerCreateTestCaseTool(server: McpServer) {
         });
 
         const createdTestCaseId = response.data.id;
-        // const finalMessage = `Test Case ${createdTestCaseId} created successfully.`; // Old message handling
         let messageParts: string[] = [];
 
         messageParts.push(`Test Case ${createdTestCaseId} created successfully.`);
@@ -189,76 +169,29 @@ export function registerCreateTestCaseTool(server: McpServer) {
             messageParts.push(`View at: ${response.data._links.html.href}.`);
         }
 
-        // Add message for linking to related work item, if applicable
-        if (relatedWorkItemId && relatedWorkItemId !== 0) {
-            messageParts.push(`Linked to work item ${relatedWorkItemId}.`);
-        }
-
-        // Conditional child suite creation and adding test case to it.
-        // This block executes if parentPlanId, parentSuiteId, and relatedWorkItemId are all validly provided.
-        if (parentPlanId && parentPlanId !== 0 && parentSuiteId && parentSuiteId !== 0 && relatedWorkItemId && relatedWorkItemId !== 0) {
+        // Simplified logic: if parentPlanId and parentSuiteId are provided, add test case to that suite.
+        if (parentPlanId && parentPlanId !== 0 && parentSuiteId && parentSuiteId !== 0) {
           const organization = "WexHealthTech"; // Assuming this is constant or retrieved from config
-          let actualNewTestSuiteName: string | undefined;
-
           try {
-            // Fetch the title of the related work item to use as the new suite name.
-            const relatedWorkItemUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${relatedWorkItemId}?api-version=7.1-preview.3`;
-            const relatedWorkItemResponse = await axios.get(relatedWorkItemUrl, {
-              headers: { 'Authorization': `Bearer ${pat}` }
-            });
-            actualNewTestSuiteName = relatedWorkItemResponse.data.fields['System.Title'];
-
-            if (!actualNewTestSuiteName) {
-              messageParts.push(`Could not retrieve title for related work item ${relatedWorkItemId}. Child suite operations skipped.`);
-            } else {
-              try {
-                // Attempt to get an existing suite by this name or create a new one.
-                const childSuiteId = await getOrCreateStaticTestSuite({
-                  planId: parentPlanId,
-                  parentSuiteId: parentSuiteId,
-                  suiteName: actualNewTestSuiteName,
-                  projectName: projectName!, 
-                  pat: pat!,
-                  organization: organization
-                });
-
-                // If getOrCreateStaticTestSuite was successful, childSuiteId will be the ID of the suite.
-                try {
-                  // Add the newly created test case to the child suite.
-                  const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${parentPlanId}/Suites/${childSuiteId}/testcases?api-version=7.0`;
-                  const addTcToSuiteBody = [{ id: createdTestCaseId.toString() }]; 
-                  await axios.post(addTcToSuiteUrl, addTcToSuiteBody, {
-                    headers: {
-                      'Authorization': `Bearer ${pat}`,
-                      'Content-Type': 'application/json'
-                    }
-                  });
-                  messageParts.push(`Child suite '${actualNewTestSuiteName}' (ID: ${childSuiteId}) processed, and test case added to it.`);
-                } catch (addError) {
-                  const addErrorMessage = addError instanceof Error ? addError.message : 'Unknown error';
-                  messageParts.push(`Child suite '${actualNewTestSuiteName}' (ID: ${childSuiteId}) processed. Failed to add test case to this suite: ${addErrorMessage}.`);
-                }
-              } catch (getOrCreateError) { // Catch errors from getOrCreateStaticTestSuite
-                const getOrCreateErrorMessage = getOrCreateError instanceof Error ? getOrCreateError.message : 'Unknown error';
-                messageParts.push(`Failed to create/find child suite '${actualNewTestSuiteName}': ${getOrCreateErrorMessage}.`);
+            const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${parentPlanId}/Suites/${parentSuiteId}/testcases?api-version=7.0`;
+            const addTcToSuiteBody = [{ id: createdTestCaseId.toString() }]; 
+            await axios.post(addTcToSuiteUrl, addTcToSuiteBody, {
+              headers: {
+                'Authorization': `Bearer ${pat}`,
+                'Content-Type': 'application/json'
               }
-            }
-          } catch (titleOrOtherSuiteError) { // Catch errors from fetching title or other unexpected errors in the suite operations block
-            const suiteOpErrorMessage = titleOrOtherSuiteError instanceof Error ? titleOrOtherSuiteError.message : 'Unknown error';
-            let contextMessageForError = "";
-            if (actualNewTestSuiteName) {
-                 contextMessageForError = `for suite '${actualNewTestSuiteName}'`;
-            } else if (relatedWorkItemId) {
-                 contextMessageForError = `while fetching title for work item ${relatedWorkItemId}`;
-            }
-            messageParts.push(`Error during suite operations ${contextMessageForError}: ${suiteOpErrorMessage}.`);
+            });
+            messageParts.push(`Test case added to suite ${parentSuiteId} in plan ${parentPlanId}.`);
+          } catch (addError) {
+            const addErrorMessage = addError instanceof Error ? addError.message : 'Unknown error';
+            messageParts.push(`Failed to add test case to suite ${parentSuiteId} in plan ${parentPlanId}: ${addErrorMessage}.`);
           }
         }
         
         return {
           content: [{ 
             type: "text", 
-            text: messageParts.join(' ') // Join all parts for the final message
+            text: messageParts.join(' ')
           }]
         };
       } catch (error) {
