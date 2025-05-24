@@ -156,17 +156,11 @@ export async function updateAutomatedTest(options: {
   testCaseId: number;
   automatedTestName: string;
   automatedTestStorage: string;
-  pat: string;
-  automatedTestId?: string;
-  automatedTestType?: string;
 }): Promise<{ success: boolean; message: string; data?: any; errorDetails?: any }> {
   const {
     testCaseId,
     automatedTestName,
-    automatedTestStorage,
-    pat,
-    automatedTestId,
-    automatedTestType = "Unit Test",
+    automatedTestStorage
   } = options;
 
   let config;
@@ -177,28 +171,24 @@ export async function updateAutomatedTest(options: {
   }
   const { organization, projectName } = config;
 
-  if (!pat) {
+  if (!process.env.AZDO_PAT) {
     // This check is more for robustness, assuming pat is usually validated by the caller or a tool wrapper.
     return { success: false, message: 'Azure DevOps Personal Access Token not found.' };
   }
 
   const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${testCaseId}?api-version=7.1-preview.3`;
 
-  const localAutomatedTestId = automatedTestId || crypto.randomUUID();
-
   const requestBody = [
     { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomatedTestName", "value": automatedTestName },
     { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomatedTestStorage", "value": automatedTestStorage },
-    { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomatedTestType", "value": automatedTestType },
     { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomationStatus", "value": "Automated" },
-    { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomatedTestId", "value": localAutomatedTestId }
   ];
 
   try {
     console.log(`Attempting to update test case ${testCaseId} with automation details. URL: ${apiUrl}`);
     const response = await axios.patch(apiUrl, requestBody, {
       headers: {
-        'Authorization': `Bearer ${pat}`,
+        'Authorization': `Bearer ${process.env.AZDO_PAT}`,
         'Content-Type': 'application/json-patch+json'
       }
     });
@@ -226,9 +216,6 @@ const UpdateAutomatedTestSchema = z.object({
   testCaseId: z.number().describe("The ID of the Test Case work item to update."),
   automatedTestName: z.string().describe("The fully qualified name of the automated test method (e.g., \'Namespace.ClassName.MethodName\')."),
   automatedTestStorage: z.string().describe("The name of the test assembly or DLL (e.g., \'MyProject.Tests.dll\')."),
-  pat: z.string().optional().describe("The Personal Access Token for Azure DevOps. If not provided, it will attempt to use AZDO_PAT environment variable."),
-  automatedTestId: z.string().optional().describe("Optional. A unique ID for the automated test. If not provided, a new GUID will be generated."),
-  automatedTestType: z.string().optional().default("Unit Test").describe("Optional. The type of the automated test. Defaults to \'Unit Test\'.")
 });
 
 /**
@@ -458,7 +445,7 @@ export function registerTestCaseFunc(server: McpServer) {
               try {
                 // Add the created test case to the NEWLY CREATED CHILD suite
                 const addChildTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${parentPlanId}/Suites/${newlyCreatedChildSuiteId}/testcases/${createdTestCaseId}?api-version=7.0`;
-                                
+
                 const addChildTcToSuiteBody = [{ id: createdTestCaseId.toString() }];
                 await axios.post(addChildTcToSuiteUrl, addChildTcToSuiteBody, {
                   headers: {
@@ -513,7 +500,7 @@ export function registerUpdateAutomatedTestTool(server: McpServer) {
     async (params: z.infer<typeof UpdateAutomatedTestSchema>) => { // Explicitly type params
       try {
         // Ensure PAT is available, either from params or environment
-        const effectivePat = params.pat || process.env.AZDO_PAT;
+        const effectivePat = process.env.AZDO_PAT;
         if (!effectivePat) {
           return {
             content: [{ type: "text", text: "Error: Azure DevOps Personal Access Token not provided (either in parameters or AZDO_PAT environment variable)." }]
@@ -525,9 +512,6 @@ export function registerUpdateAutomatedTestTool(server: McpServer) {
           testCaseId: params.testCaseId,
           automatedTestName: params.automatedTestName,
           automatedTestStorage: params.automatedTestStorage,
-          pat: effectivePat, // Use the resolved PAT
-          automatedTestId: params.automatedTestId,
-          automatedTestType: params.automatedTestType,
         };
 
         const result = await updateAutomatedTest(optionsForUpdate);
