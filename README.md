@@ -123,11 +123,19 @@ The following tools are exposed by this MCP server:
         *   `suiteName` (string): The name of the static test suite.
 
 5.  **`add-testcase-to-testsuite`**
-    *   Description: Adds an existing test case to a specified test suite.
+    *   Description: Adds existing test cases to a specified test suite.
     *   Parameters:
         *   `testCaseId` (string): The csv-delim ID string of the Test Case (e.g. 12345,45566).
         *   `planId` (number): The ID of the Test Plan containing the suite.
         *   `suiteId` (number): The ID of the Test Suite.
+
+6.  **`copy-testcases-to-testsuite`**
+    *   Description: Copies all test cases from a source test suite to a new test suite (created with the same name as the source suite) under a specified destination test plan and parent suite.
+    *   Parameters:
+        *   `sourcePlanId` (number): The ID of the Test Plan containing the source test suite.
+        *   `sourceSuiteId` (number): The ID of the source Test Suite from which to copy test cases.
+        *   `destinationPlanId` (number): The ID of the Test Plan where the new suite will be created.
+        *   `destinationSuiteId` (number): The ID of the parent Test Suite under which the new suite (containing the copied test cases) will be created.
 
 ## Development
 

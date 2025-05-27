@@ -390,4 +390,286 @@ Updates an existing Azure DevOps Test Case work item with automated test details
 *   `automatedTestName` (string, required): The fully qualified name of the automated test method (e.g., "Namespace.ClassName.MethodName").
 *   `automatedTestStorage` (string, required): The name of the test assembly or DLL (e.g., "MyProject.Tests.dll").
 
+### 5. `copy-testcases-to-testsuite`
+
+Copies all test cases from a specified source test suite to a new test suite. The new test suite is created with the same name as the source test suite, under a specified destination test plan and parent test suite.
+
+**Parameters:**
+
+*   `sourcePlanId` (number, required): ID of the source Test Plan containing the suite from which to copy test cases.
+*   `sourceSuiteId` (number, required): ID of the source Test Suite from which to copy test cases.
+*   `destinationPlanId` (number, required): ID of the destination Test Plan where the new suite will be created.
+*   `destinationSuiteId` (number, required): ID of the parent Test Suite in the destination plan under which the new suite (containing copied test cases) will be created.
+
 ---
+
+# Instructions for Test Suite Management Tools
+
+## 1. Overview
+
+This document provides instructions for using the Azure DevOps Test Suite Management tools. These tools allow you to create and manage test cases and test suites in Azure DevOps, and to configure global settings for Azure DevOps project integration.
+
+## 2. Prerequisites
+
+Before using these tools, ensure you have the following:
+
+*   An Azure DevOps organization and project set up.
+*   Sufficient permissions to create and manage test cases, test suites, and work items in Azure DevOps.
+*   Node.js and npm installed, if running the tools locally.
+
+## 3. User Story: Implement `copy-testcases-to-testsuite` MCP Tool
+*   **Description:** Create a new MCP tool named `copy-testcases-to-testsuite` in `src/testCaseUtils.ts`.
+    *   This tool will copy all test cases from a specified source test suite to a new test suite.
+    *   The new test suite will be created with the same name as the source test suite.
+    *   The new test suite will be created under a specified destination test plan and a specified destination parent test suite.
+*   **Sub-tasks:**
+    *   [x] **3.1: Define MCP Tool Structure for `copyTestCasesToTestSuiteTool`:**
+        *   [x] In `src/testCaseUtils.ts`, create a new exported function `copyTestCasesToTestSuiteTool(server: McpServer)`.
+        *   [x] Register the tool with the name `copy-testcases-to-testsuite`.
+        *   [x] Define the Zod input schema with the following properties:
+            *   `sourcePlanId: z.number().describe("ID of the source Test Plan containing the suite from which to copy test cases.")`
+            *   `sourceSuiteId: z.number().describe("ID of the source Test Suite from which to copy test cases.")`
+            *   `destinationPlanId: z.number().describe("ID of the destination Test Plan where the new suite will be created.")`
+            *   `destinationSuiteId: z.number().describe("ID of the parent Test Suite in the destination plan under which the new suite (containing copied test cases) will be created.")`
+        *   [x] Implement the initial `async` handler function, destructuring the input properties.
+        *   [x] Call `getAzureDevOpsConfig()` to get `organization`, `projectName`, and `pat`.
+        *   [x] Include basic error handling for config retrieval.
+    *   [x] **3.2: Implement Logic to Fetch Test Case IDs from Source Suite:**
+        *   [x] Construct the API URL: `https://dev.azure.com/{organization}/{projectName}/_apis/test/Plans/{sourcePlanId}/Suites/{sourceSuiteId}/testcases?api-version=7.0`.
+        *   [x] Make an `axios.get` call to fetch the test cases.
+        *   [x] Extract the test case IDs into an array (e.g., `sourceTestCaseIds: string[]`).
+        *   [x] Handle errors (e.g., source suite not found, API errors).
+        *   [x] Handle the case where the source suite has no test cases (return an informative message).
+    *   [x] **3.3: Implement Logic to Fetch Source Test Suite Name:**
+        *   [x] Construct the API URL: `https://dev.azure.com/{organization}/{projectName}/_apis/testplan/Plans/{sourcePlanId}/Suites/{sourceSuiteId}?api-version=7.0`.
+        *   [x] Make an `axios.get` call to fetch the source suite details.
+        *   [x] Extract the `name` of the source suite (e.g., `sourceSuiteName: string`).
+        *   [x] Handle errors (e.g., source suite details not found).
+    *   [x] **3.4: Implement Logic to Create/Get Destination Test Suite:**
+        *   [x] Call the existing `getOrCreateStaticTestSuite` helper function with:
+            *   `planId: destinationPlanId`
+            *   `parentSuiteId: destinationSuiteId`
+            *   `suiteName: sourceSuiteName` (the name fetched in the previous step)
+        *   [x] Store the returned suite ID (e.g., `newlyCreatedDestinationSuiteId: number`).
+        *   [x] Handle errors from `getOrCreateStaticTestSuite`.
+    *   [x] **3.5: Implement Logic to Add Fetched Test Cases to New Destination Suite:**
+        *   [x] Use the `addTestCasesToSuiteAPI` helper function.
+        *   [x] Pass `destinationPlanId`, `newlyCreatedDestinationSuiteId`, and the `sourceTestCaseIds` (joined into a comma-separated string) to `addTestCasesToSuiteAPI`.
+        *   [x] Handle success and error responses from `addTestCasesToSuiteAPI`.
+        *   [x] Return a comprehensive success or error message to the MCP client, including details like the number of test cases copied, source/destination suite names and IDs.
+    *   [x] **3.6: Register the new tool in `src/index.ts`:**
+        *   [x] Import `copyTestCasesToTestSuiteTool` from `./testCaseUtils.js`.
+        *   [x] Call `copyTestCasesToTestSuiteTool(this);` within the `AzDoMcpServer` class constructor or relevant registration method.
+    *   [x] **3.7: Update Documentation (`README.md` and `instructions/testsuite.md`):**
+        *   [x] Add an entry for the new `copy-testcases-to-testsuite` tool in `README.md`, detailing its purpose, parameters, and an example.
+        *   [ ] Add a section for this user story in `instructions/testsuite.md` (this current section).
+
+---
+
+## Available Tools
+
+### 1. `create-testcase`
+
+Creates a new Test Case work item in Azure DevOps.
+
+**Parameters:**
+
+*   `title` (string, required): The title of the test case.
+*   `areaPath` (string, optional, default: project name or "Health"): The Area Path for the test case.
+*   `iterationPath` (string, optional, default: project name or "Health"): The Iteration Path for the test case.
+*   `steps` (string, optional): Multi-line natural language string describing test steps.
+*   `priority` (number, optional, default: 2): Priority of the test case (1-4).
+*   `assignedTo` (string, optional): User to assign the test case to.
+*   `state` (string, optional, default: "Design"): Initial state of the test case.
+*   `reason` (string, optional, default: "New"): Reason for the initial state.
+*   `automationStatus` (string, optional, default: "Not Automated"): Automation status.
+*   `parentPlanId` (number, optional): ID of the Test Plan. If provided with `parentSuiteId`, a new child test suite (named after the test case title) is created under `parentSuiteId`, and the test case is added to this new child suite.
+*   `parentSuiteId` (number, optional): ID of the parent Test Suite. Required if `parentPlanId` is provided for child suite creation.
+
+### 2. `create-static-testsuite`
+
+Creates a new Static Test Suite in Azure DevOps or finds an existing one with the same name under a specified parent suite and plan.
+
+**Parameters:**
+
+*   `planId` (number, required): The ID of the Test Plan.
+*   `parentSuiteId` (number, required): The ID of the parent Test Suite under which this new suite will be a child.
+*   `suiteName` (string, required): The name for the new static test suite.
+
+### 3. `add-testcase-to-testsuite`
+
+Adds an existing test case to a specified test suite in Azure DevOps.
+
+**Parameters:**
+
+*   `testCaseId` (number, required): The ID of the Test Case to add.
+*   `planId` (number, required): The ID of the Test Plan containing the suite.
+*   `suiteId` (number, required): The ID of the Test Suite to which the test case will be added.
+
+### 4. `update-automated-test`
+
+Updates an existing Azure DevOps Test Case work item with automated test details, linking it to an automated test method and assembly.
+
+**Parameters:**
+
+*   `testCaseId` (number, required): The ID of the Test Case work item to update.
+*   `automatedTestName` (string, required): The fully qualified name of the automated test method (e.g., "Namespace.ClassName.MethodName").
+*   `automatedTestStorage` (string, required): The name of the test assembly or DLL (e.g., "MyProject.Tests.dll").
+
+### 5. `copy-testcases-to-testsuite`
+
+Copies all test cases from a specified source test suite to a new test suite. The new test suite is created with the same name as the source test suite, under a specified destination test plan and parent test suite.
+
+**Parameters:**
+
+*   `sourcePlanId` (number, required): ID of the source Test Plan containing the suite from which to copy test cases.
+*   `sourceSuiteId` (number, required): ID of the source Test Suite from which to copy test cases.
+*   `destinationPlanId` (number, required): ID of the destination Test Plan where the new suite will be created.
+*   `destinationSuiteId` (number, required): ID of the parent Test Suite in the destination plan under which the new suite (containing copied test cases) will be created.
+
+---
+
+# Instructions for Test Suite Management Tools
+
+## 1. Overview
+
+This document provides instructions for using the Azure DevOps Test Suite Management tools. These tools allow you to create and manage test cases and test suites in Azure DevOps, and to configure global settings for Azure DevOps project integration.
+
+## 2. Prerequisites
+
+Before using these tools, ensure you have the following:
+
+*   An Azure DevOps organization and project set up.
+*   Sufficient permissions to create and manage test cases, test suites, and work items in Azure DevOps.
+*   Node.js and npm installed, if running the tools locally.
+
+## 3. User Story: Implement `copy-testcases-to-testsuite` MCP Tool
+*   **Description:** Create a new MCP tool named `copy-testcases-to-testsuite` in `src/testCaseUtils.ts`.
+    *   This tool will copy all test cases from a specified source test suite to a new test suite.
+    *   The new test suite will be created with the same name as the source test suite.
+    *   The new test suite will be created under a specified destination test plan and a specified destination parent test suite.
+*   **Sub-tasks:**
+    *   [x] **3.1: Define MCP Tool Structure for `copyTestCasesToTestSuiteTool`:**
+        *   [x] In `src/testCaseUtils.ts`, create a new exported function `copyTestCasesToTestSuiteTool(server: McpServer)`.
+        *   [x] Register the tool with the name `copy-testcases-to-testsuite`.
+        *   [x] Define the Zod input schema with the following properties:
+            *   `sourcePlanId: z.number().describe("ID of the source Test Plan containing the suite from which to copy test cases.")`
+            *   `sourceSuiteId: z.number().describe("ID of the source Test Suite from which to copy test cases.")`
+            *   `destinationPlanId: z.number().describe("ID of the destination Test Plan where the new suite will be created.")`
+            *   `destinationSuiteId: z.number().describe("ID of the parent Test Suite in the destination plan under which the new suite (containing copied test cases) will be created.")`
+        *   [x] Implement the initial `async` handler function, destructuring the input properties.
+        *   [x] Call `getAzureDevOpsConfig()` to get `organization`, `projectName`, and `pat`.
+        *   [x] Include basic error handling for config retrieval.
+    *   [x] **3.2: Implement Logic to Fetch Test Case IDs from Source Suite:**
+        *   [x] Construct the API URL: `https://dev.azure.com/{organization}/{projectName}/_apis/test/Plans/{sourcePlanId}/Suites/{sourceSuiteId}/testcases?api-version=7.0`.
+        *   [x] Make an `axios.get` call to fetch the test cases.
+        *   [x] Extract the test case IDs into an array (e.g., `sourceTestCaseIds: string[]`).
+        *   [x] Handle errors (e.g., source suite not found, API errors).
+        *   [x] Handle the case where the source suite has no test cases (return an informative message).
+    *   [x] **3.3: Implement Logic to Fetch Source Test Suite Name:**
+        *   [x] Construct the API URL: `https://dev.azure.com/{organization}/{projectName}/_apis/testplan/Plans/{sourcePlanId}/Suites/{sourceSuiteId}?api-version=7.0`.
+        *   [x] Make an `axios.get` call to fetch the source suite details.
+        *   [x] Extract the `name` of the source suite (e.g., `sourceSuiteName: string`).
+        *   [x] Handle errors (e.g., source suite details not found).
+    *   [x] **3.4: Implement Logic to Create/Get Destination Test Suite:**
+        *   [x] Call the existing `getOrCreateStaticTestSuite` helper function with:
+            *   `planId: destinationPlanId`
+            *   `parentSuiteId: destinationSuiteId`
+            *   `suiteName: sourceSuiteName` (the name fetched in the previous step)
+        *   [x] Store the returned suite ID (e.g., `newlyCreatedDestinationSuiteId: number`).
+        *   [x] Handle errors from `getOrCreateStaticTestSuite`.
+    *   [x] **3.5: Implement Logic to Add Fetched Test Cases to New Destination Suite:**
+        *   [x] Use the `addTestCasesToSuiteAPI` helper function.
+        *   [x] Pass `destinationPlanId`, `newlyCreatedDestinationSuiteId`, and the `sourceTestCaseIds` (joined into a comma-separated string) to `addTestCasesToSuiteAPI`.
+        *   [x] Handle success and error responses from `addTestCasesToSuiteAPI`.
+        *   [x] Return a comprehensive success or error message to the MCP client, including details like the number of test cases copied, source/destination suite names and IDs.
+    *   [x] **3.6: Register the new tool in `src/index.ts`:**
+        *   [x] Import `copyTestCasesToTestSuiteTool` from `./testCaseUtils.js`.
+        *   [x] Call `copyTestCasesToTestSuiteTool(this);` within the `AzDoMcpServer` class constructor or relevant registration method.
+    *   [x] **3.7: Update Documentation (`README.md` and `instructions/testsuite.md`):**
+        *   [x] Add an entry for the new `copy-testcases-to-testsuite` tool in `README.md`, detailing its purpose, parameters, and an example.
+        *   [x] Add a section for this user story in `instructions/testsuite.md` (this current section).
+
+---
+
+## Instructions for `copy-testcases-to-testsuite` Tool
+
+### 1. Overview
+
+The `copy-testcases-to-testsuite` tool allows you to copy all test cases from a specified source test suite to a new test suite in Azure DevOps. The new test suite is created under a specified destination test plan and parent test suite, and is named the same as the source test suite.
+
+### 2. Request Format
+
+To use the `copy-testcases-to-testsuite` tool, send a request with the following structure:
+
+**Request Body:**
+```json
+{
+    "tool": "copy-testcases-to-testsuite",
+    "arguments": {
+        "sourcePlanId": 123,
+        "sourceSuiteId": 456,
+        "destinationPlanId": 789,
+        "destinationSuiteId": 1012 // This is the parent suite for the new suite
+    }
+}
+```
+
+### 3. Response
+
+**Successful Response:**
+```json
+{
+    "success": true,
+    "message": "Test cases copied successfully.",
+    "data": {
+        "copiedTestCaseIds": [1, 2, 3],
+        "newSuiteId": 101
+    }
+}
+```
+
+**Error Response:**
+```json
+{
+    "success": false,
+    "message": "Error details here.",
+    "errorCode": "SPECIFIC_ERROR_CODE"
+}
+```
+
+### 4. Example
+
+**Request:**
+```json
+{
+    "tool": "copy-testcases-to-testsuite",
+    "arguments": {
+        "sourcePlanId": 123,
+        "sourceSuiteId": 456,
+        "destinationPlanId": 789,
+        "destinationSuiteId": 1012
+    }
+}
+```
+
+**Successful Response:**
+```json
+{
+    "success": true,
+    "message": "Test cases copied successfully.",
+    "data": {
+        "copiedTestCaseIds": [1, 2, 3],
+        "newSuiteId": 101
+    }
+}
+```
+
+**Error Response:**
+```json
+{
+    "success": false,
+    "message": "Error details here.",
+    "errorCode": "SPECIFIC_ERROR_CODE"
+}
+```

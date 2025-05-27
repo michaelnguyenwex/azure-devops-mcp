@@ -269,6 +269,61 @@ export function createStaticTestSuiteTool(server: McpServer) { // Renamed functi
   );
 }
 
+/**
+ * Helper function to add one or more test cases to a specified test suite via Azure DevOps API.
+ * @param options - The options for adding test cases.
+ * @returns A promise that resolves to an object indicating success or failure and a message.
+ */
+async function addTestCasesToSuiteAPI(options: {
+  organization: string;
+  projectName: string;
+  pat: string;
+  planId: number;
+  suiteId: number;
+  testCaseIds: string; // Comma-separated string of test case IDs
+}): Promise<{ success: boolean; message: string; data?: any; errorDetails?: any }> {
+  const { organization, projectName, pat, planId, suiteId, testCaseIds } = options;
+
+  if (!testCaseIds || testCaseIds.length === 0) {
+    return { success: true, message: "No test cases provided to add." };
+  }
+
+  // The API for bulk add to a suite expects POST to /_apis/testplan/Plans/{planId}/Suites/{suiteId}/testcases/{testCaseIds}
+  // where {testCaseIds} is a comma-separated string of IDs in the URL path.
+  const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${testCaseIds}?api-version=7.0`;
+
+  try {
+    // Corrected: Send null as the body, headers in the config (3rd argument)
+    // The API takes test case IDs from the URL path, so no body is needed for this specific endpoint.
+    const response = await axios.post(addTcToSuiteUrl, null, {
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Content-Type': 'application/json' // This content type is standard, even if no body is sent.
+      }
+    });
+
+    // Assuming success if axios doesn't throw for non-2xx statuses.
+    // The response for this API call is usually an array of the test case references that were added.
+    // Example: response.data.value might contain the added items.
+    // Count can be derived from the input string as a fallback if response doesn't clearly state it.
+    const count = response.data?.count || response.data?.value?.length || testCaseIds.split(',').length; 
+    const message = `Successfully added ${count} test case(s) (${testCaseIds}) to suite ${suiteId} in plan ${planId}.`;
+    console.log(message, response.data);
+    return { success: true, message: message, data: response.data };
+
+  } catch (error: any) {
+    const errorMessage = error.message || 'Unknown error';
+    const azdoErrorDetail = error.response?.data?.message || '';
+    const fullErrorMessage = `Failed to add test case(s) (${testCaseIds}) to suite ${suiteId} in plan ${planId}: ${errorMessage}. ${azdoErrorDetail}`.trim();
+    console.error(fullErrorMessage, error.response?.data);
+    return {
+      success: false,
+      message: fullErrorMessage,
+      errorDetails: error.response?.data
+    };
+  }
+}
+
 export function addTestCaseToTestSuiteTool(server: McpServer) { // Renamed function
   server.tool(
     "add-testcase-to-testsuite",
@@ -287,29 +342,26 @@ export function addTestCaseToTestSuiteTool(server: McpServer) { // Renamed funct
       }
       const { organization, projectName, pat } = config; // Destructure pat
         
-      let suiteOperationMessage: string = "";
-      try {
-        const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${testCaseIdString}?api-version=7.0`;
-        // For adding a single test case, the API expects an array containing an object with the test case ID.
-        const requestBody = [{ id: testCaseIdString.toString() }]; 
-
-        await axios.post(addTcToSuiteUrl, requestBody, { // Pass requestBody
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        suiteOperationMessage = `Test case ${testCaseIdString} successfully added to suite ${suiteId} in plan ${planId}.`;
-      } catch (addError) {
-        const addErrorMessage = addError instanceof Error ? addError.message : 'Unknown error';
-        const azdoErrorDetail = (addError as any).response?.data?.message || '';
-        suiteOperationMessage = `Failed to add test case ${testCaseIdString} to suite ${suiteId} in plan ${planId}: ${addErrorMessage}. ${azdoErrorDetail}`;
+      // The testCaseIdString is already a comma-separated string.
+      // Filter ensures that if an empty string is passed, it doesn't proceed with an empty ID.
+      const trimmedTestCaseIdString = testCaseIdString.trim();
+      if (!trimmedTestCaseIdString) {
+        return { content: [{ type: "text", text: "No valid test case IDs provided in the string." }] };
       }
+
+      const result = await addTestCasesToSuiteAPI({
+        organization,
+        projectName,
+        pat,
+        planId,
+        suiteId,
+        testCaseIds: trimmedTestCaseIdString // Corrected: property name is testCaseIds, value is the trimmed comma-separated string
+      });
 
       return {
         content: [{ 
           type: "text", 
-          text: suiteOperationMessage
+          text: result.message 
         }]
       };
     }
@@ -517,6 +569,150 @@ export function updateAutomatedTestTool(server: McpServer) { // Renamed function
             text: `Unhandled error in update-automated-test tool: ${error instanceof Error ? error.message : 'Unknown error'}. Ensure AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables are correctly set.` // Enhanced error message
           }]
         };
+      }
+    }
+  );
+}
+
+export function copyTestCasesToTestSuiteTool(server: McpServer) {
+  server.tool(
+    "copy-testcases-to-testsuite",
+    "Copies all test cases from a specified source test suite to a new test suite (created with the same name as the source suite) under a specified destination test plan and parent suite. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",
+    {
+      sourcePlanId: z.number().describe("ID of the source Test Plan containing the suite from which to copy test cases."),
+      sourceSuiteId: z.number().describe("ID of the source Test Suite from which to copy test cases."),
+      destinationPlanId: z.number().describe("ID of the destination Test Plan where the new suite will be created."),
+      destinationSuiteId: z.number().describe("ID of the parent Test Suite in the destination plan under which the new suite (containing copied test cases) will be created.")
+    },
+    async ({ sourcePlanId, sourceSuiteId, destinationPlanId, destinationSuiteId }) => {
+      try {
+        const { organization, projectName, pat } = await getAzureDevOpsConfig();
+        
+        let sourceTestCaseIds: string[] = [];
+
+        try {
+          const getTestCasesUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${sourcePlanId}/Suites/${sourceSuiteId}/testcases?api-version=7.0`;
+          console.log(`Fetching test cases from URL: ${getTestCasesUrl}`);
+
+          const response = await axios.get(getTestCasesUrl, {
+            headers: {
+              'Authorization': `Bearer ${pat}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.data && response.data.value && response.data.value.length > 0) {
+            sourceTestCaseIds = response.data.value.map((item: any) => item.testCase.id.toString());
+            console.log(`Found ${sourceTestCaseIds.length} test case(s) in source suite ${sourceSuiteId}.`);
+          } else {
+            console.log(`No test cases found in source suite ${sourceSuiteId}.`);
+            return {
+              content: [{ type: "text", text: `No test cases found in source suite ${sourceSuiteId} (Plan: ${sourcePlanId}). No test cases will be copied.` }]
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching test cases from source suite ${sourceSuiteId}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          const azdoErrorDetail = (error as any).response?.data?.message ? `Azure DevOps Error: ${(error as any).response.data.message}` : '';
+          return { 
+            content: [{ type: "text", text: `Error fetching test cases from source suite ${sourceSuiteId} (Plan: ${sourcePlanId}): ${errorMessage}. ${azdoErrorDetail}`.trim() }] 
+          };
+        }
+
+        // If sourceTestCaseIds is still empty after the try-catch (e.g., API returned value but it was empty array, handled above)
+        // This check is slightly redundant due to the explicit return above but serves as a safeguard.
+        if (sourceTestCaseIds.length === 0) {
+          return {
+            content: [{ type: "text", text: `No test cases found in source suite ${sourceSuiteId} (Plan: ${sourcePlanId}). No test cases were copied.` }]
+          };
+        }
+
+        // Step 3: Fetch Source Suite Name
+        let sourceSuiteName = '';
+        try {
+          const getSourceSuiteDetailsUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${sourcePlanId}/Suites/${sourceSuiteId}?api-version=7.0`;
+          console.log(`Fetching source suite details from URL: ${getSourceSuiteDetailsUrl}`);
+          const suiteDetailsResponse = await axios.get(getSourceSuiteDetailsUrl, {
+            headers: {
+              'Authorization': `Bearer ${pat}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (suiteDetailsResponse.data && suiteDetailsResponse.data.name) {
+            sourceSuiteName = suiteDetailsResponse.data.name;
+            console.log(`Source suite name: '${sourceSuiteName}'`);
+          } else {
+            throw new Error("Source suite name could not be retrieved from API response.");
+          }
+        } catch (error) {
+          console.error(`Error fetching details for source suite ${sourceSuiteId}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          const azdoErrorDetail = (error as any).response?.data?.message ? `Azure DevOps Error: ${(error as any).response.data.message}` : '';
+          return {
+            content: [{ type: "text", text: `Error fetching details for source suite ${sourceSuiteId} (Plan: ${sourcePlanId}): ${errorMessage}. ${azdoErrorDetail}`.trim() }]
+          };
+        }
+
+        // Step 4: Create/Get Destination Test Suite
+        let newlyCreatedDestinationSuiteId: number;
+        try {
+          console.log(`Attempting to create/get destination suite with name '${sourceSuiteName}' under parent suite ${destinationSuiteId} in plan ${destinationPlanId}.`);
+          newlyCreatedDestinationSuiteId = await getOrCreateStaticTestSuite({
+            planId: destinationPlanId,
+            parentSuiteId: destinationSuiteId,
+            suiteName: sourceSuiteName // Use the fetched source suite name
+          });
+          console.log(`Ensured destination suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}) exists.`);
+        } catch (error) {
+          console.error(`Error creating/finding destination suite '${sourceSuiteName}':`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          return {
+            content: [{ type: "text", text: `Error creating or finding destination suite '${sourceSuiteName}' under parent ${destinationSuiteId} in plan ${destinationPlanId}: ${errorMessage}` }]
+          };
+        }
+
+        // Step 5: Add Fetched Test Cases to New Destination Suite
+        try {
+          console.log(`Attempting to add ${sourceTestCaseIds.length} test case(s) to destination suite ${newlyCreatedDestinationSuiteId}.`);
+
+          const addResult = await addTestCasesToSuiteAPI({
+            organization,
+            projectName,
+            pat,
+            planId: destinationPlanId,
+            suiteId: newlyCreatedDestinationSuiteId,
+            testCaseIds: sourceTestCaseIds.join(',') // Corrected: join array into comma-separated string
+          });
+
+          if (addResult.success) {
+            const successMessage = `Successfully copied ${sourceTestCaseIds.length} test case(s) from source suite '${sourceSuiteName}' (ID: ${sourceSuiteId}, Plan: ${sourcePlanId}) to new/existing suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}, Plan: ${destinationPlanId}). Test Case IDs: ${sourceTestCaseIds.join(', ')}. API Response: ${addResult.message}`;
+            console.log(successMessage);
+            return {
+              content: [{ type: "text", text: successMessage }]
+            };
+          } else {
+            // Error already logged by addTestCasesToSuiteAPI
+            return {
+              content: [{ type: "text", text: `Error during copy operation after creating suite. Failed to add test cases to destination suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}): ${addResult.message}` }]
+            };
+          }
+
+        } catch (error) {
+          // This catch block might be redundant if addTestCasesToSuiteAPI handles all its errors and doesn't throw
+          console.error(`Unexpected error in Step 5 when trying to add test cases to destination suite ${newlyCreatedDestinationSuiteId}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          return {
+            content: [{ type: "text", text: `Unexpected error adding test cases to destination suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}): ${errorMessage}` }]
+          };
+        }
+
+      } catch (err) {
+        // Handle errors, including those from getAzureDevOpsConfig()
+        if (err instanceof Error && (err.message.includes('Azure DevOps configuration error') || err.message.includes('AZDO_ORG') || err.message.includes('AZDO_PROJECT') || err.message.includes('AZDO_PAT'))) {
+          return { content: [{ type: "text", text: `Azure DevOps configuration error: ${err.message}` }] };
+        }
+        // Generic error for other issues during this initial setup phase
+        return { content: [{ type: "text", text: `An unexpected error occurred: ${(err as Error).message}` }] };
       }
     }
   );

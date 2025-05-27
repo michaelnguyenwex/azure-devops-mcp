@@ -8,7 +8,8 @@ import {
     addTestCaseToTestSuiteTool, // Renamed import
     updateAutomatedTestTool, // Renamed import
     registerTestCaseTool, // Renamed import
-    createStaticTestSuiteTool // Renamed import
+    createStaticTestSuiteTool, // Renamed import
+    copyTestCasesToTestSuiteTool // Added import for the new tool
 } from './testCaseUtils.js';
 import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
 
@@ -61,14 +62,12 @@ server.tool(
   }
 );
 
-registerTestCaseTool(server); // Updated to renamed function
-
-// Register the update-automated-test tool
-updateAutomatedTestTool(server); // Updated to renamed function
-
-createStaticTestSuiteTool(server); // Updated to renamed function
-
-addTestCaseToTestSuiteTool(server); // Updated to renamed function
+// Register tools from testCaseUtils.ts
+registerTestCaseTool(server); // Renamed function call
+addTestCaseToTestSuiteTool(server); // Renamed function call
+updateAutomatedTestTool(server); // Renamed function call
+createStaticTestSuiteTool(server); // Renamed function call
+copyTestCasesToTestSuiteTool(server); // Register the new tool
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
