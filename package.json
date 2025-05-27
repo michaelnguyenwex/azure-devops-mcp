@@ -1,16 +1,17 @@
 {
   "name": "mcp-azdo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "build": "tsc"
   },
   "bin": {
-    "azdo": "./build/index.js"
+    "azdo-mcp": "./build/index.js"
   },
   "files": [
-    "build"
+    "build",
+    "README.md"
   ],
   "keywords": [],
   "author": "",
