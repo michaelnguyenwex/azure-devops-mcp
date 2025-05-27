@@ -92,7 +92,7 @@ The following tools are exposed by this MCP server:
         *   `azdoId` (number): The ID of the work item to fetch.
 
 2.  **`create-testcase`**
-    *   Description: Creates a new Test Case work item in Azure DevOps.
+    *   Description: Creates a new Test Case work item, create a new test suite, and place the test case under the test suite in Azure DevOps.
     *   Parameters:
         *   `title` (string): The title of the test case.
         *   `areaPath` (string, optional): The Area Path for the test case.
@@ -105,9 +105,11 @@ The following tools are exposed by this MCP server:
         *   `automationStatus` (string, optional): Automation status (e.g., "Not Automated").
         *   `parentPlanId` (number, optional): ID of the Test Plan. If provided with `parentSuiteId`, a new child test suite (named after the test case title) is created.
         *   `parentSuiteId` (number, optional): ID of the parent Test Suite for child suite creation.
+    *   Notes:
+        *   If you didn't provide values for either parentPlanId or parentSuiteId, the func only create the test case without creating the test suite.
 
 3.  **`update-automated-test`**
-    *   Description: Updates an Azure DevOps Test Case with automated test details.
+    *   Description: Updates an Azure DevOps Test Case with automated test details. This is useful when you are creating automated test case and need bind your test code with the test case.
     *   Parameters:
         *   `testCaseId` (number): The ID of the Test Case work item.
         *   `automatedTestName` (string): The fully qualified name of the automated test method.
@@ -123,7 +125,7 @@ The following tools are exposed by this MCP server:
 5.  **`add-testcase-to-testsuite`**
     *   Description: Adds an existing test case to a specified test suite.
     *   Parameters:
-        *   `testCaseId` (number): The ID of the Test Case.
+        *   `testCaseId` (string): The csv-delim ID string of the Test Case (e.g. 12345,45566).
         *   `planId` (number): The ID of the Test Plan containing the suite.
         *   `suiteId` (number): The ID of the Test Suite.
 

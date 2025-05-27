@@ -99,24 +99,24 @@ async function getOrCreateStaticTestSuite(options: {
   }
   const { organization, projectName, pat } = configFromStore; // Destructure pat here
 
-  const listSuitesUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${parentSuiteId}/suites?api-version=7.0`; // Corrected URL to list child suites
+  // const listSuitesUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${parentSuiteId}/suites?api-version=7.0`; // Corrected URL to list child suites
 
-  try {
-    // Attempt to find an existing suite with the same name under the parent
-    const listResponse = await axios.get(listSuitesUrl, {
-      headers: {
-        'Authorization': `Bearer ${pat}`,
-        'Content-Type': 'application/json'
-      }
-    });
+   try {
+  //   // Attempt to find an existing suite with the same name under the parent
+  //   const listResponse = await axios.get(listSuitesUrl, {
+  //     headers: {
+  //       'Authorization': `Bearer ${pat}`,
+  //       'Content-Type': 'application/json'
+  //     }
+  //   });
 
-    if (listResponse.data && listResponse.data.value) {
-      const existingSuite = listResponse.data.value.find((suite: any) => suite.name === suiteName && suite.suiteType === "StaticTestSuite");
-      if (existingSuite) {
-        console.log(`Found existing static suite '${suiteName}' with ID: ${existingSuite.id} under parent ${parentSuiteId}.`);
-        return existingSuite.id;
-      }
-    }
+  //   if (listResponse.data && listResponse.data.value) {
+  //     const existingSuite = listResponse.data.value.find((suite: any) => suite.name === suiteName && suite.suiteType === "StaticTestSuite");
+  //     if (existingSuite) {
+  //       console.log(`Found existing static suite '${suiteName}' with ID: ${existingSuite.id} under parent ${parentSuiteId}.`);
+  //       return existingSuite.id;
+  //     }
+  //   }
 
     // If not found, create a new suite
     const createSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/suites?api-version=7.0`;
@@ -187,8 +187,7 @@ export async function updateAutomatedTest(options: {
 
   const requestBody = [
     { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomatedTestName", "value": automatedTestName },
-    { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomatedTestStorage", "value": automatedTestStorage },
-    { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomationStatus", "value": "Automated" },
+    { "op": "add", "path": "/fields/Microsoft.VSTS.TCM.AutomatedTestStorage", "value": automatedTestStorage }
   ];
 
   try {
@@ -275,11 +274,11 @@ export function addTestCaseToTestSuiteTool(server: McpServer) { // Renamed funct
     "add-testcase-to-testsuite",
     "Adds an existing test case to a specified test suite in Azure DevOps. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.", // Updated description
     {
-      testCaseId: z.number().describe("The ID of the Test Case."),
+      testCaseIdString: z.string().describe("The comma-delim string of ID of the Test Case."),
       planId: z.number().describe("The ID of the Test Plan containing the suite."),
       suiteId: z.number().describe("The ID of the Test Suite to add the test case to."),
     },
-    async ({ testCaseId, planId, suiteId }) => {
+    async ({ testCaseIdString, planId, suiteId }) => {
       let config;
       try {
         config = await getAzureDevOpsConfig(); // Get config (includes pat)
@@ -290,9 +289,9 @@ export function addTestCaseToTestSuiteTool(server: McpServer) { // Renamed funct
         
       let suiteOperationMessage: string = "";
       try {
-        const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${suiteId}/testcases/${testCaseId}?api-version=7.0`;
+        const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${testCaseIdString}?api-version=7.0`;
         // For adding a single test case, the API expects an array containing an object with the test case ID.
-        const requestBody = [{ id: testCaseId.toString() }]; 
+        const requestBody = [{ id: testCaseIdString.toString() }]; 
 
         await axios.post(addTcToSuiteUrl, requestBody, { // Pass requestBody
           headers: {
@@ -300,11 +299,11 @@ export function addTestCaseToTestSuiteTool(server: McpServer) { // Renamed funct
             'Content-Type': 'application/json'
           }
         });
-        suiteOperationMessage = `Test case ${testCaseId} successfully added to suite ${suiteId} in plan ${planId}.`;
+        suiteOperationMessage = `Test case ${testCaseIdString} successfully added to suite ${suiteId} in plan ${planId}.`;
       } catch (addError) {
         const addErrorMessage = addError instanceof Error ? addError.message : 'Unknown error';
         const azdoErrorDetail = (addError as any).response?.data?.message || '';
-        suiteOperationMessage = `Failed to add test case ${testCaseId} to suite ${suiteId} in plan ${planId}: ${addErrorMessage}. ${azdoErrorDetail}`;
+        suiteOperationMessage = `Failed to add test case ${testCaseIdString} to suite ${suiteId} in plan ${planId}: ${addErrorMessage}. ${azdoErrorDetail}`;
       }
 
       return {
