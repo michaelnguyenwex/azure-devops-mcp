@@ -318,3 +318,76 @@
         *   [ ] Re-run `fetch-item`, `create-test-case`, and `update-automated-test`. Verify they now work correctly using the globally set configuration.
     *   [ ] **7.3: Run `npm run build` to check for any TypeScript compilation errors.**
         *   [ ] Resolve any build errors.
+
+---
+
+## Setup
+
+Before using these tools, you need to set up the following environment variables:
+
+*   `AZDO_ORG`: Your Azure DevOps organization name.
+*   `AZDO_PROJECT`: Your Azure DevOps project name.
+*   `AZDO_PAT`: Your Azure DevOps Personal Access Token with appropriate permissions (e.g., `Work Items Read & Write`, `Test Management Read & Write`).
+
+Example:
+```bash
+export AZDO_ORG="YourOrganization"
+export AZDO_PROJECT="YourProject"
+export AZDO_PAT="YourPersonalAccessToken"
+```
+
+Ensure these variables are available in the environment where the MCP server is running.
+
+---
+
+## Available Tools
+
+### 1. `create-testcase`
+
+Creates a new Test Case work item in Azure DevOps.
+
+**Parameters:**
+
+*   `title` (string, required): The title of the test case.
+*   `areaPath` (string, optional, default: project name or "Health"): The Area Path for the test case.
+*   `iterationPath` (string, optional, default: project name or "Health"): The Iteration Path for the test case.
+*   `steps` (string, optional): Multi-line natural language string describing test steps.
+*   `priority` (number, optional, default: 2): Priority of the test case (1-4).
+*   `assignedTo` (string, optional): User to assign the test case to.
+*   `state` (string, optional, default: "Design"): Initial state of the test case.
+*   `reason` (string, optional, default: "New"): Reason for the initial state.
+*   `automationStatus` (string, optional, default: "Not Automated"): Automation status.
+*   `parentPlanId` (number, optional): ID of the Test Plan. If provided with `parentSuiteId`, a new child test suite (named after the test case title) is created under `parentSuiteId`, and the test case is added to this new child suite.
+*   `parentSuiteId` (number, optional): ID of the parent Test Suite. Required if `parentPlanId` is provided for child suite creation.
+
+### 2. `create-static-testsuite`
+
+Creates a new Static Test Suite in Azure DevOps or finds an existing one with the same name under a specified parent suite and plan.
+
+**Parameters:**
+
+*   `planId` (number, required): The ID of the Test Plan.
+*   `parentSuiteId` (number, required): The ID of the parent Test Suite under which this new suite will be a child.
+*   `suiteName` (string, required): The name for the new static test suite.
+
+### 3. `add-testcase-to-testsuite`
+
+Adds an existing test case to a specified test suite in Azure DevOps.
+
+**Parameters:**
+
+*   `testCaseId` (number, required): The ID of the Test Case to add.
+*   `planId` (number, required): The ID of the Test Plan containing the suite.
+*   `suiteId` (number, required): The ID of the Test Suite to which the test case will be added.
+
+### 4. `update-automated-test`
+
+Updates an existing Azure DevOps Test Case work item with automated test details, linking it to an automated test method and assembly.
+
+**Parameters:**
+
+*   `testCaseId` (number, required): The ID of the Test Case work item to update.
+*   `automatedTestName` (string, required): The fully qualified name of the automated test method (e.g., "Namespace.ClassName.MethodName").
+*   `automatedTestStorage` (string, required): The name of the test assembly or DLL (e.g., "MyProject.Tests.dll").
+
+---

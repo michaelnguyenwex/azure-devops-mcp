@@ -1,10 +1,14 @@
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import 'dotenv/config'
 import axios from 'axios';
-import {addTestCaseToTestSuite, registerUpdateAutomatedTestTool, registerTestCaseFunc, createStaticTestSuite } from './testCaseUtils.js';
-import { registerAzureProjectTool } from './projectConfigTool.js'; // Import the new registration function
+import {
+    addTestCaseToTestSuiteTool, // Renamed import
+    updateAutomatedTestTool, // Renamed import
+    registerTestCaseTool, // Renamed import
+    createStaticTestSuiteTool // Renamed import
+} from './testCaseUtils.js';
 import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
 
 // Create an MCP server
@@ -20,14 +24,13 @@ server.tool(
   { azdoId: z.number()},
   async ({ azdoId }) => {
     try {
-      const { organization, projectName } = await getAzureDevOpsConfig(); // Get config
+      const { organization, projectName, pat } = await getAzureDevOpsConfig(); // Get config, including pat
       const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${azdoId}?api-version=7.1-preview.3&$expand=relations`;
       
-      // Get the Personal Access Token from .env file
-      const pat = process.env.AZDO_PAT;
-      if (!pat) {
-        throw new Error('Azure DevOps Personal Access Token not found in .env file');
-      }    
+      // const pat = process.env.AZDO_PAT; // Removed direct access, pat is from getAzureDevOpsConfig
+      // if (!pat) { // This check is now handled by getAzureDevOpsConfig
+      //   throw new Error('Azure DevOps Personal Access Token not found in .env file');
+      // }    
       
       // Make the API call with authorization header
       const response = await axios.get(apiUrl, {
@@ -57,17 +60,14 @@ server.tool(
   }
 );
 
-registerTestCaseFunc(server);
+registerTestCaseTool(server); // Updated to renamed function
 
 // Register the update-automated-test tool
-registerUpdateAutomatedTestTool(server);
+updateAutomatedTestTool(server); // Updated to renamed function
 
-// Register the register-azure-project tool
-registerAzureProjectTool(server);
+createStaticTestSuiteTool(server); // Updated to renamed function
 
-createStaticTestSuite(server);
-
-addTestCaseToTestSuite(server);
+addTestCaseToTestSuiteTool(server); // Updated to renamed function
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
