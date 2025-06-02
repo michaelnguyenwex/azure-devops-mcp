@@ -34,3 +34,14 @@ export async function fetchJiraAPI(endpointPath: string): Promise<string> {
   }
 }
 
+/**
+ * Fetches issue details from Jira API as a JSON string.
+ * @param issueIdOrKey - The ID or key of the Jira issue to fetch.
+ * @returns A promise that resolves to the issue details as a JSON string.
+ * @throws An error if the request fails or the issue does not exist.
+ */
+export async function fetchJiraIssueDetailsString(issueIdOrKey: string): Promise<string> {
+  const endpointPath = `/rest/api/3/issue/${issueIdOrKey}`;
+  return await fetchJiraAPI(endpointPath);
+}
+

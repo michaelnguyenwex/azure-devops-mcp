@@ -24,12 +24,12 @@
     *   [x] Add JSDoc comments explaining the function, its parameters, and what it returns (a JSON string) or throws.
 
 3.  **Implement Function to Fetch Main Issue Information as JSON String**
-    *   [ ] Import `fetchJiraAPI` from `jiraUtils.ts`.
-    *   [ ] Create an asynchronous function `fetchJiraIssueDetailsString(issueIdOrKey: string): Promise<string>`.
-    *   [ ] Construct the `endpointPath` for fetching issue details: `/rest/api/3/issue/${issueIdOrKey}`.
-    *   [ ] Call `await fetchJiraAPI(endpointPath)` to get the issue data as a JSON string.
-    *   [ ] Return the resulting string.
-    *   [ ] Add JSDoc comments for `fetchJiraIssueDetailsString`.
+    *   [x] Import `fetchJiraAPI` from `jiraUtils.ts`.
+    *   [x] Create an asynchronous function `fetchJiraIssueDetailsString(issueIdOrKey: string): Promise<string>`.
+    *   [x] Construct the `endpointPath` for fetching issue details: `/rest/api/3/issue/${issueIdOrKey}`.
+    *   [x] Call `await fetchJiraAPI(endpointPath)` to get the issue data as a JSON string.
+    *   [x] Return the resulting string.
+    *   [x] Add JSDoc comments for `fetchJiraIssueDetailsString`.
 
 4.  **Implement Function to Fetch Issue Remote Links as JSON String**
     *   [ ] In the same file as `fetchJiraIssueDetailsString` (e.g., `src/services/jiraService.ts`).
