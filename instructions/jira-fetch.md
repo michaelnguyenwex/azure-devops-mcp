@@ -5,23 +5,23 @@
 
 
 2.  **Implement a Reusable Authenticated Jira API GET Request Function using Axios to Return JSON String**
-    *   [ ] Open file (e.g., `src/jiraUtils.ts`).
-    *   [ ] Import `axios` and `AxiosError` from 'axios'.
-    *   [ ] Import `JIRA_API_BASE_URL` from your config file and `getJiraPat` from your env utils/config file.
-    *   [ ] Implement an asynchronous function `fetchJiraAPI(endpointPath: string): Promise<string>`.
-    *   [ ] Inside `fetchJiraAPI`, construct the `fullUrl` by concatenating `JIRA_API_BASE_URL` and `endpointPath`.
-    *   [ ] Retrieve the JIRA PAT using `getJiraPat()`. This PAT is expected to be the Base64 encoded "email:api_token" string.
-    *   [ ] Prepare the request headers:
+    *   [x] Open file (e.g., `src/jiraUtils.ts`).
+    *   [x] Import `axios` and `AxiosError` from 'axios'.
+    *   [x] Import `JIRA_API_BASE_URL` from your config file and `getJiraPat` from your env utils/config file.
+    *   [x] Implement an asynchronous function `fetchJiraAPI(endpointPath: string): Promise<string>`.
+    *   [x] Inside `fetchJiraAPI`, construct the `fullUrl` by concatenating `JIRA_API_BASE_URL` and `endpointPath`.
+    *   [x] Retrieve the JIRA PAT using `getJiraPat()`. This PAT is expected to be the Base64 encoded "email:api_token" string.
+    *   [x] Prepare the request headers:
         *   `'Authorization': \`Basic ${jiraPat}\``
         *   `'Accept': 'application/json'`
-    *   [ ] Use `axios.get(fullUrl, { headers, transformResponse: (res) => res })` to make the GET request. The `transformResponse` option ensures the raw response string is returned instead of parsed JSON.
-    *   [ ] Implement error handling using a `try...catch` block:
+    *   [x] Use `axios.get(fullUrl, { headers, transformResponse: (res) => res })` to make the GET request. The `transformResponse` option ensures the raw response string is returned instead of parsed JSON.
+    *   [x] Implement error handling using a `try...catch` block:
         *   If the request is successful, `axios` will return a response object. Return `response.data` (which will be the string due to `transformResponse`).
         *   In the `catch (error)` block:
             *   Check if the error is an `AxiosError` using `axios.isAxiosError(error)`.
             *   If it is an `AxiosError`, extract details from `error.response` (like `status`, `statusText`, `data` which might be a string or parsed error object) and throw a new, more informative error (e.g., `throw new Error(\`Jira API request to ${endpointPath} failed with status ${error.response?.status}: ${error.response?.statusText}. Details: ${error.response?.data}\`);`).
             *   If it's not an `AxiosError`, or if `error.response` is not available, rethrow the original error or a generic error message.
-    *   [ ] Add JSDoc comments explaining the function, its parameters, and what it returns (a JSON string) or throws.
+    *   [x] Add JSDoc comments explaining the function, its parameters, and what it returns (a JSON string) or throws.
 
 3.  **Implement Function to Fetch Main Issue Information as JSON String**
     *   [ ] Import `fetchJiraAPI` from `jiraUtils.ts`.
