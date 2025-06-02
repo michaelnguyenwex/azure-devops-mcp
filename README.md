@@ -55,6 +55,7 @@ This tool requires the following environment variables to be set to authenticate
 *   `AZDO_ORG`: Your Azure DevOps organization name.
 *   `AZDO_PROJECT`: Your Azure DevOps project name.
 *   `AZDO_PAT`: Your Azure DevOps Personal Access Token. The PAT must have sufficient permissions (e.g., "Read & write" for Work Items and "Read & write" for Test Management).
+*   `JIRA_PAT`: Your JIRA api key.
 
 You can set these variables in your shell environment or by creating a `.env` file in the root of this project with the following format:
 
@@ -62,6 +63,7 @@ You can set these variables in your shell environment or by creating a `.env` fi
 AZDO_ORG=YourOrganizationName
 AZDO_PROJECT=YourProjectName
 AZDO_PAT=YourPersonalAccessToken
+JIRA_PAT=YourPersonalAccessToken
 ```
 
 When used as an MCP server, these environment variables can also be passed via the MCP host's configuration.
@@ -87,9 +89,9 @@ The server will then listen for MCP requests.
 The following tools are exposed by this MCP server:
 
 1.  **`fetch-item`**
-    *   Description: Get Azure DevOps details for a specific work item.
+    *   Description: Get Azure DevOps details or JIRA details for a specific work item.
     *   Parameters:
-        *   `azdoId` (number): The ID of the work item to fetch.
+        *   `itemId` (string): The ID of the work item to fetch (either AZDO or JIRA)
 
 2.  **`create-testcase`**
     *   Description: Creates a new Test Case work item, create a new test suite, and place the test case under the test suite in Azure DevOps.
