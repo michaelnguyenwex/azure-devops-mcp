@@ -9,6 +9,22 @@ export const AzureDevOpsConfigSchema = z.object({
 
 export type AzureDevOpsConfig = z.infer<typeof AzureDevOpsConfigSchema>;
 
+// Jira API base URL
+export const JIRA_API_BASE_URL = "https://wexinc.atlassian.net";
+
+/**
+ * Retrieves the Jira Personal Access Token from environment variables.
+ * @returns The Jira PAT which is expected to be Base64 encoded "email:api_token" string.
+ * @throws An error if the environment variable JIRA_PAT is not set or is empty.
+ */
+export function getJiraPat(): string {
+  const pat = process.env.JIRA_PAT;
+  if (!pat) {
+    throw new Error("JIRA_PAT environment variable not set. Please ensure it is configured in your .env file or system environment.");
+  }
+  return pat;
+}
+
 /**
  * Retrieves the Azure DevOps organization, project name, and PAT from environment variables.
  * @returns A promise that resolves to the AzureDevOpsConfig object.
