@@ -45,3 +45,14 @@ export async function fetchJiraIssueDetailsString(issueIdOrKey: string): Promise
   return await fetchJiraAPI(endpointPath);
 }
 
+/**
+ * Fetches remote links for a Jira issue as a JSON string.
+ * @param issueIdOrKey - The ID or key of the Jira issue to fetch remote links for.
+ * @returns A promise that resolves to the remote links as a JSON string.
+ * @throws An error if the request fails or the issue does not exist.
+ */
+export async function fetchJiraIssueRemoteLinksString(issueIdOrKey: string): Promise<string> {
+  const endpointPath = `/rest/api/3/issue/${issueIdOrKey}/remotelink`;
+  return await fetchJiraAPI(endpointPath);
+}
+

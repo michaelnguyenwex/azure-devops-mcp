@@ -32,13 +32,13 @@
     *   [x] Add JSDoc comments for `fetchJiraIssueDetailsString`.
 
 4.  **Implement Function to Fetch Issue Remote Links as JSON String**
-    *   [ ] In the same file as `fetchJiraIssueDetailsString` (e.g., `src/services/jiraService.ts`).
-    *   [ ] Import `fetchJiraAPI`.
-    *   [ ] Create an asynchronous function `fetchJiraIssueRemoteLinksString(issueIdOrKey: string): Promise<string>`.
-    *   [ ] Construct the `endpointPath` for fetching remote links: `/rest/api/3/issue/${issueIdOrKey}/remotelink`.
-    *   [ ] Call `await fetchJiraAPI(endpointPath)` to get the remote links as a JSON string.
-    *   [ ] Return the resulting string.
-    *   [ ] Add JSDoc comments for `fetchJiraIssueRemoteLinksString`.
+    *   [x] In the same file as `fetchJiraIssueDetailsString` (e.g., `src/jiraUtils.ts`).
+    *   [x] Import `fetchJiraAPI`.
+    *   [x] Create an asynchronous function `fetchJiraIssueRemoteLinksString(issueIdOrKey: string): Promise<string>`.
+    *   [x] Construct the `endpointPath` for fetching remote links: `/rest/api/3/issue/${issueIdOrKey}/remotelink`.
+    *   [x] Call `await fetchJiraAPI(endpointPath)` to get the remote links as a JSON string.
+    *   [x] Return the resulting string.
+    *   [x] Add JSDoc comments for `fetchJiraIssueRemoteLinksString`.
 
 5.  **Implement the `fetchIssueFromJIRA` Function to Consolidate JSON String Data**
     *   [ ] In the same file as the previous two functions (e.g., `src/jiraUtils.ts`).
