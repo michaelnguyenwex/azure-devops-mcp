@@ -56,3 +56,27 @@ export async function fetchJiraIssueRemoteLinksString(issueIdOrKey: string): Pro
   return await fetchJiraAPI(endpointPath);
 }
 
+/**
+ * Interface for the combined Jira JSON strings returned by fetchIssueFromJIRA.
+ */
+export interface CombinedJiraJsonStrings {
+  issueJsonString: string;
+  remoteLinksJsonString: string;
+}
+
+/**
+ * Fetches both issue details and its remote links from Jira API and consolidates them.
+ * @param issueIdOrKey - The ID or key of the Jira issue to fetch.
+ * @returns A promise that resolves to an object containing both issue details and remote links as JSON strings.
+ * @throws An error if either request fails.
+ */
+export async function fetchIssueFromJIRA(issueIdOrKey: string): Promise<CombinedJiraJsonStrings> {
+  const issueJson = await fetchJiraIssueDetailsString(issueIdOrKey);
+  const remoteLinksJson = await fetchJiraIssueRemoteLinksString(issueIdOrKey);
+  
+  return {
+    issueJsonString: issueJson,
+    remoteLinksJsonString: remoteLinksJson,
+  };
+}
+

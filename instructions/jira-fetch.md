@@ -41,9 +41,9 @@
     *   [x] Add JSDoc comments for `fetchJiraIssueRemoteLinksString`.
 
 5.  **Implement the `fetchIssueFromJIRA` Function to Consolidate JSON String Data**
-    *   [ ] In the same file as the previous two functions (e.g., `src/jiraUtils.ts`).
-    *   [ ] Import `fetchJiraIssueDetailsString` and `fetchJiraIssueRemoteLinksString`.
-    *   [ ] Define an interface or type for the return structure, e.g.:
+    *   [x] In the same file as the previous two functions (e.g., `src/jiraUtils.ts`).
+    *   [x] Import `fetchJiraIssueDetailsString` and `fetchJiraIssueRemoteLinksString`.
+    *   [x] Define an interface or type for the return structure, e.g.:
         ```typescript
         // Can be defined in jiraService.ts or a types file if you create one later
         export interface CombinedJiraJsonStrings {
@@ -51,12 +51,12 @@
           remoteLinksJsonString: string;
         }
         ```
-    *   [ ] Create an asynchronous function `fetchIssueFromJIRA(issueIdOrKey: string): Promise<CombinedJiraJsonStrings>`.
-    *   [ ] Inside the function, call `const issueJson = await fetchJiraIssueDetailsString(issueIdOrKey);`.
-    *   [ ] Call `const remoteLinksJson = await fetchJiraIssueRemoteLinksString(issueIdOrKey);`.
-    *   [ ] Construct and return the `CombinedJiraJsonStrings` object:
+    *   [x] Create an asynchronous function `fetchIssueFromJIRA(issueIdOrKey: string): Promise<CombinedJiraJsonStrings>`.
+    *   [x] Inside the function, call `const issueJson = await fetchJiraIssueDetailsString(issueIdOrKey);`.
+    *   [x] Call `const remoteLinksJson = await fetchJiraIssueRemoteLinksString(issueIdOrKey);`.
+    *   [x] Construct and return the `CombinedJiraJsonStrings` object:
         ```typescript
-        // filepath: src/services/jiraService.ts
+        // filepath: src/jiraUtils.ts
         // ...existing code...
         return {
           issueJsonString: issueJson,
@@ -64,8 +64,8 @@
         };
         // ...existing code...
         ```
-    *   [ ] Add JSDoc comments for `fetchIssueFromJIRA`.
-    *   [ ] Export `fetchIssueFromJIRA` and `CombinedJiraJsonStrings` (if defined in this file).
+    *   [x] Add JSDoc comments for `fetchIssueFromJIRA`.
+    *   [x] Export `fetchIssueFromJIRA` and `CombinedJiraJsonStrings` (if defined in this file).
 
 6.  **Integrate `fetchIssueFromJIRA` into `fetch-item` in `index.ts`**
     *   [ ] Open `src/index.ts`.
