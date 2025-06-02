@@ -12,6 +12,7 @@ import {
     copyTestCasesToTestSuiteTool // Added import for the new tool
 } from './testCaseUtils.js';
 import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
+import { fetchIssueFromJIRA, CombinedJiraJsonStrings } from './jiraUtils.js'; // Import Jira functionality
 
 // Create an MCP server
 const server = new McpServer({
@@ -22,40 +23,50 @@ const server = new McpServer({
 
 server.tool(
     "fetch-item",
-     "Get AZDO details for an item",
-  { azdoId: z.number()},
-  async ({ azdoId }) => {
+     "Get details for an item from AZDO or Jira",
+  { itemId: z.string() },
+  async ({ itemId }) => {
     try {
-      const { organization, projectName, pat } = await getAzureDevOpsConfig(); // Get config, including pat
-      const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${azdoId}?api-version=7.1-preview.3&$expand=relations`;
+      // Check if the itemId is numeric (AZDO) or string-based (Jira)
+      const isNumeric = /^\d+$/.test(itemId);
       
-      // const pat = process.env.AZDO_PAT; // Removed direct access, pat is from getAzureDevOpsConfig
-      // if (!pat) { // This check is now handled by getAzureDevOpsConfig
-      //   throw new Error('Azure DevOps Personal Access Token not found in .env file');
-      // }    
-      
-      // Make the API call with authorization header
-      const response = await axios.get(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${pat}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      // Return the response data
-      return {
-        content: [{ 
-          type: "text", 
-          text: JSON.stringify(response.data, null, 2)
-        }]
-      };
+      if (isNumeric) {
+        // Handle as AZDO item
+        const azdoId = parseInt(itemId, 10);
+        const { organization, projectName, pat } = await getAzureDevOpsConfig();
+        const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${azdoId}?api-version=7.1-preview.3&$expand=relations`;
+        
+        const response = await axios.get(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${pat}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        return {
+          content: [{ 
+            type: "text", 
+            text: JSON.stringify(response.data, null, 2)
+          }]
+        };
+      } else {
+        // Handle as Jira item
+        const jiraData = await fetchIssueFromJIRA(itemId);
+        
+        return {
+          content: [{ 
+            type: "text", 
+            text: `Jira Issue Details: ${jiraData.issueJsonString}\n\nJira Remote Links: ${jiraData.remoteLinksJsonString}`
+          }]
+        };
+      }
     } catch (error) {
-      console.error('Error fetching data from Azure DevOps:', error);
+      console.error('Error fetching item:', error);
       
       return {
         content: [{ 
           type: "text", 
-          text: `Error fetching work item ${azdoId}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          text: `Error fetching item ${itemId}: ${error instanceof Error ? error.message : 'Unknown error'}`
         }]
       };
     }

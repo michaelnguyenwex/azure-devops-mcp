@@ -68,43 +68,15 @@
     *   [x] Export `fetchIssueFromJIRA` and `CombinedJiraJsonStrings` (if defined in this file).
 
 6.  **Integrate `fetchIssueFromJIRA` into `fetch-item` in `index.ts`**
-    *   [ ] Open `src/index.ts`.
-    *   [ ] Import the `fetchIssueFromJIRA` function and `CombinedJiraJsonStrings` type from `src/services/jiraService.ts`.
-    *   [ ] Locate the `server.tool("fetch-item", ...)` definition.
-    *   [ ] **Critical Adaptation:** The current `fetch-item` tool's Zod schema is `{ azdoId: z.number() }`. Jira's `issueIdOrKey` is a string.
+    *   [x] Open `src/index.ts`.
+    *   [x] Import the `fetchIssueFromJIRA` function and `CombinedJiraJsonStrings` type from `src/jiraUtils.js`.
+    *   [x] Locate the `server.tool("fetch-item", ...)` definition.
+    *   [x] **Critical Adaptation:** The current `fetch-item` tool's Zod schema is `{ azdoId: z.number() }`. Jira's `issueIdOrKey` is a string.
         *   Change the Zod schema to accept a string identifier, e.g., `{ itemId: z.string() }`.
         *   Update the tool's description to reflect it can fetch generic items or specify it now fetches Jira items.
-    *   [ ] Modify the `async ({ azdoId })` handler to reflect the new input, e.g., `async ({ itemId }) => {`.
-    *   [ ] Inside the `try` block of `fetch-item`, call the Jira fetching function:
+    *   [x] Modify the `async ({ azdoId })` handler to reflect the new input, e.g., `async ({ itemId }) => {`.
+    *   [x] Inside the `try` block of `fetch-item`, call the Jira fetching function:
         *   `const jiraData: CombinedJiraJsonStrings = await fetchIssueFromJIRA(itemId);`
-    *   [ ] Adapt the return structure of `fetch-item` to include the Jira JSON strings.
-        ```typescript
-        // filepath: src/index.ts
-        // ...existing code...
-        // Inside server.tool("fetch-item", ...)
-        // async ({ itemId }) => { // Assuming itemId is the new string input for Jira key
-        //   try {
-        //     // ... existing ADO call might be removed or made conditional ...
-        
-        //     const jiraData = await fetchIssueFromJIRA(itemId); // Call the new Jira function
-            
-        //     return {
-        //       content: [{ 
-        //         type: "text", 
-        //         text: \`Jira Issue Details (JSON String): ${jiraData.issueJsonString}\\n\\nJira Remote Links (JSON String): ${jiraData.remoteLinksJsonString}\`
-        //       }]
-        //     };
-        //   } catch (error) {
-        //     console.error('Error in fetch-item (Jira):', error);
-        //     return {
-        //       content: [{ 
-        //         type: "text", 
-        //         text: \`Error fetching Jira item ${itemId}: ${error instanceof Error ? error.message : 'Unknown error'}\`
-        //       }]
-        //     };
-        //   }
-        // }
-        // ...existing code...
-        ```
-    *   [ ] Ensure all necessary imports are resolved and there are no type errors.
-    *   [ ] Update the tool's main description (the second argument to `server.tool`) if its functionality has changed significantly (e.g., from "Get AZDO details" to "Get JIRA details" or "Get item details").
+    *   [x] Adapt the return structure of `fetch-item` to include the Jira JSON strings.
+    *   [x] Ensure all necessary imports are resolved and there are no type errors.
+    *   [x] Update the tool's main description (the second argument to `server.tool`) if its functionality has changed significantly (e.g., from "Get AZDO details" to "Get JIRA details" or "Get item details").
