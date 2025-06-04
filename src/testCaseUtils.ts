@@ -426,7 +426,7 @@ export function registerTestCaseTool(server: McpServer) { // Renamed function
       automationStatus: z.string().optional().default("Not Automated").describe("The automation status of the test case (e.g., 'Not Automated', 'Automated', 'Planned'). Defaults to 'Not Automated'."),
       parentPlanId: z.number().optional().describe("Optional. The ID of the Test Plan. If provided with `parentSuiteId`, a new child test suite (named after the test case title) will be created under the specified `parentSuiteId`, and the test case will be added to this new child suite."),
       parentSuiteId: z.number().optional().describe("Optional. The ID of the parent Test Suite. If provided with `parentPlanId`, a new child test suite (named after the test case title) will be created under this suite, and the test case will be added to this new child suite."),
-      jiraWorkItemId: z.string().optional().describe("Optional. The JIRA issue ID to link the test case to.")
+      jiraWorkItemId: z.string().optional().default("").describe("Optional. The JIRA issue ID to link the test case to.")
     },
         async ({ title, areaPath, iterationPath, steps, priority, assignedTo, state, reason, automationStatus, parentPlanId, parentSuiteId, jiraWorkItemId }) => {
       let config;
@@ -449,7 +449,7 @@ export function registerTestCaseTool(server: McpServer) { // Renamed function
         {
           "op": "add",
           "path": "/fields/System.Title",
-          "value": title
+          "value": jiraWorkItemId.length > 0 ? `${jiraWorkItemId} - ${title}` : title
         },
         {
           "op": "add",
