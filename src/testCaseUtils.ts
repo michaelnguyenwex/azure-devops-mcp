@@ -885,3 +885,106 @@ async function getTestCaseDetails(testCaseId: string | number, config: { organiz
     };
   }
 }
+
+/**
+ * @description Updates an existing Azure DevOps Test Case work item's System.Description field with a link to a Jira issue.
+ * @param options The options for updating the test case.
+ * @param options.testCaseId The ID of the Test Case work item to update.
+ * @param options.jiraKey The Jira issue key to link (e.g., 'CDH-123').
+ * @returns A promise that resolves to an object indicating success or failure, along with response data or error details.
+ */
+export async function updateTestCase(options: {
+  testCaseId: number;
+  jiraKey: string;
+}): Promise<{ success: boolean; message: string; data?: any; errorDetails?: any }> {
+  const { testCaseId, jiraKey } = options;
+
+  let config;
+  try {
+    config = await getAzureDevOpsConfig();
+  } catch (err) {
+    return { success: false, message: `Azure DevOps configuration error: ${(err as Error).message}. Please ensure AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables are set.` };
+  }
+  const { organization, projectName, pat } = config;
+
+  const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/${testCaseId}?api-version=7.1-preview.3`;
+
+  // Create the description HTML with link to Jira
+  const descriptionHtml = `<div><span style="font-size:17px;display:inline !important;"><a href="https://wexinc.atlassian.net/browse/${jiraKey}">https://wexinc.atlassian.net/browse/${jiraKey}</a></span><br> </div>`;
+
+  const requestBody = [
+    { "op": "add", "path": "/fields/System.Description", "value": descriptionHtml }
+  ];
+
+  try {
+    console.log(`Attempting to update test case ${testCaseId} with Jira link to ${jiraKey}. URL: ${apiUrl}`);
+    const response = await axios.patch(apiUrl, requestBody, {
+      headers: {
+        'Authorization': `Bearer ${pat}`, // Use pat from config
+        'Content-Type': 'application/json-patch+json'
+      }
+    });
+
+    if (response.status === 200) {
+      console.log(`Test case ${testCaseId} description updated successfully. Data:`, response.data);
+      return { success: true, message: `Test case ${testCaseId} description updated successfully with link to JIRA issue ${jiraKey}.`, data: response.data };
+    } else {
+      // This case might not be hit if axios throws for non-2xx statuses.
+      console.warn(`Update for test case ${testCaseId} returned status ${response.status}`, response.data);
+      return { success: false, message: `Test case ${testCaseId} update returned status ${response.status}`, data: response.data };
+    }
+  } catch (error: any) {
+    console.error(`Error updating test case ${testCaseId} with Jira link:`, error.response?.data || error.message);
+    // Check if the error is due to config issues from a deeper call, though getAzureDevOpsConfig should catch it earlier
+    if ((error as Error).message.includes('Azure DevOps configuration error')) {
+        return { success: false, message: (error as Error).message };
+    }
+    return {
+      success: false,
+      message: `Error updating test case ${testCaseId}: ${error.message}`,
+      errorDetails: error.response?.data
+    };
+  }
+}
+
+/**
+ * Registers a tool to update a test case with a Jira issue link.
+ * This is an MCP wrapper around the updateTestCase function.
+ */
+export function updateTestCaseTool(server: McpServer) {
+  server.tool(
+    "update-testcase",
+    "Updates an Azure DevOps Test Case work item's System.Description field with a link to a Jira issue. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",
+    {
+      testCaseId: z.number().describe("The ID of the Test Case work item to update."),
+      jiraKey: z.string().describe("The Jira issue key to link (e.g., 'CDH-123').")
+    },
+    async (params) => {
+      try {
+        const { testCaseId, jiraKey } = params;
+        const result = await updateTestCase({ testCaseId, jiraKey });
+        
+        if (result.success) {
+          return {
+            structuredContent: { result },
+            content: [{ type: "text", text: result.message }]
+          };
+        } else {
+          return {
+            structuredContent: { error: result.errorDetails },
+            content: [{ type: "text", text: result.message }],
+            isError: true
+          };
+        }
+      } catch (error) {
+        console.error('Error in update-testcase tool:', error);
+        const errorMessage = `Error updating test case: ${error instanceof Error ? error.message : String(error)}`;
+        return {
+          structuredContent: { error: errorMessage },
+          content: [{ type: "text", text: errorMessage }],
+          isError: true
+        };
+      }
+    }
+  );
+}
