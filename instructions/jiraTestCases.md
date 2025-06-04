@@ -64,21 +64,21 @@ The objective is to call `addItemToJIRA` when Azure DevOps test cases are create
 
 #### 2.1 Modify `addTestCaseToTestSuiteTool` Function
 
-- [ ] Add an optional `jiraWorkItemId: string` parameter to the function's input schema (e.g., using `z.string().optional().describe(...)`).
-- [ ] Update the function logic: if `jiraWorkItemId` is provided and valid:
+- [x] Add an optional `jiraWorkItemId: string` parameter to the function's input schema (e.g., using `z.string().optional().describe(...)`).
+- [x] Update the function logic: if `jiraWorkItemId` is provided and valid:
     - After successfully adding the test case(s) to the suite, construct the URL(s) for the Azure DevOps test case(s).
     - Prepare the `JIRALink` object(s) with appropriate text (e.g., "Test Case: [Test Case ID/Title]") and the constructed URL(s).
     - Call `addItemToJIRA` with the `jiraWorkItemId` and the prepared `JIRALink` array.
-- [ ] Augment the tool's return message to include the status of the JIRA update attempt (e.g., "Links added to JIRA issue [ID]" or "Failed to add links to JIRA: [error]").
+- [x] Augment the tool's return message to include the status of the JIRA update attempt (e.g., "Links added to JIRA issue [ID]" or "Failed to add links to JIRA: [error]").
 
 #### 2.2 Modify `registerTestCaseTool` Function (create-testcase)
 
-- [ ] Add an optional `jiraWorkItemId: string` parameter to the function's input schema.
-- [ ] Update the function logic: if `jiraWorkItemId` is provided and valid:
+- [x] Add an optional `jiraWorkItemId: string` parameter to the function's input schema.
+- [x] Update the function logic: if `jiraWorkItemId` is provided and valid:
     - After the Azure DevOps test case is successfully created and its ID and URL are available:
     - Prepare a `JIRALink` object with the test case title/ID and its URL.
     - Call `addItemToJIRA` with the `jiraWorkItemId` and the `JIRALink` object (as a single-element array).
-- [ ] Augment the tool's return message to include the JIRA update status.
+- [x] Augment the tool's return message to include the JIRA update status.
 
 #### 2.3 Modify `copyTestCasesToTestSuiteTool` Function
 
