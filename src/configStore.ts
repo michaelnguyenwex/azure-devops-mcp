@@ -10,7 +10,7 @@ export const AzureDevOpsConfigSchema = z.object({
 export type AzureDevOpsConfig = z.infer<typeof AzureDevOpsConfigSchema>;
 
 // Jira API base URL
-export const JIRA_API_BASE_URL = "https://wexinc.atlassian.net";
+export const JIRA_API_BASE_URL = process.env.JIRA_API_BASE_URL;
 
 /**
  * Retrieves the Jira Personal Access Token from environment variables.
