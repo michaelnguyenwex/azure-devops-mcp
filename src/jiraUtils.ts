@@ -5,8 +5,10 @@ import { JIRA_API_BASE_URL, getJiraPat } from "./configStore.js";
 
 // Sub-task issue type ID
 // This is a placeholder value and should be replaced with the actual ID from your Jira instance.
+// Pull the info of a current subtask (for ex: /rest/api/3/issue/CDH-1126) - 
+//The id under issuetype node is your subtask type id
 // To get the actual ID, make a GET request to /rest/api/3/issuetype
-export const JIRA_SUBTASK_ISSUE_TYPE_ID = "10001"; // Replace with actual ID for your Jira instance
+export const JIRA_SUBTASK_ISSUE_TYPE_ID = "10003"; // Replace with actual ID for your Jira instance
 
 /**
  * Interface for Jira configuration

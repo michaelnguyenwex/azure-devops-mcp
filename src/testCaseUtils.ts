@@ -371,8 +371,28 @@ export function addTestCaseToTestSuiteTool(server: McpServer) {
       // If JIRA work item ID is provided, add links to JIRA
       if (jiraWorkItemId) {
         try {
-          // Fetch test case details first using helper function
+          // First update each test case description with a Jira link
           const testCaseIds = trimmedTestCaseIdString.split(',');
+          let updateMessages: string[] = [];
+          
+          for (const tcIdStr of testCaseIds) {
+            const tcId = parseInt(tcIdStr, 10);
+            if (isNaN(tcId)) {
+              updateMessages.push(`Warning - Invalid Test Case ID format: ${tcIdStr}. Skipping JIRA link in description.`);
+              continue;
+            }
+            try {
+              const updateResult = await updateTestCase({ testCaseId: tcId, jiraKey: jiraWorkItemId });
+              if (!updateResult.success) {
+                updateMessages.push(`Warning - Failed to update Test Case ${tcId} description: ${updateResult.message}`);
+              }
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              updateMessages.push(`Warning - Error updating Test Case ${tcId} description: ${errorMessage}`);
+            }
+          }
+          
+          // Then fetch test case details and add links to JIRA (original logic)
           const testCaseLinks = await Promise.all(testCaseIds.map(async (tcId) => {
             const details = await getTestCaseDetails(tcId, { organization, projectName, pat });
             return {
@@ -386,7 +406,7 @@ export function addTestCaseToTestSuiteTool(server: McpServer) {
           return {
             content: [{ 
               type: "text", 
-              text: `${result.message} ${jiraResult.success ? jiraResult.message : `Warning - JIRA update failed: ${jiraResult.message}`}` 
+              text: `${result.message} ${updateMessages.join(' ')} ${jiraResult.success ? jiraResult.message : `Warning - JIRA update failed: ${jiraResult.message}`}` 
             }]
           };
         } catch (error) {
@@ -511,21 +531,32 @@ export function registerTestCaseTool(server: McpServer) { // Renamed function
             messageParts.push(`View at: ${testCaseUrl}.`);
         }
 
-        // If JIRA work item ID is provided, add link to JIRA
+        // If JIRA work item ID is provided, add link to JIRA and update test case description
         if (jiraWorkItemId && testCaseUrl) {
             try {
-                const { addItemToJIRA } = await import('./jiraUtils.js');
+                // First update the test case description with a Jira link
+                try {
+                    const updateResult = await updateTestCase({ testCaseId: createdTestCaseId, jiraKey: jiraWorkItemId });
+                    messageParts.push(updateResult.success ? 
+                        `Successfully updated Test Case ${createdTestCaseId} description with link to JIRA issue ${jiraWorkItemId}.` : 
+                        `Warning - Failed to update Test Case ${createdTestCaseId} description: ${updateResult.message}`);
+                } catch (updateError) {
+                    const updateErrorMessage = updateError instanceof Error ? updateError.message : 'Unknown error';
+                    messageParts.push(`Warning - Error updating Test Case ${createdTestCaseId} description: ${updateErrorMessage}`);
+                }
+                
+                // Then add the test case link to the JIRA item (original logic)
                 const jiraResult = await addItemToJIRA(jiraWorkItemId, [{
                     text: title,
                     url: testCaseUrl
                 }]);
                 
                 messageParts.push(jiraResult.success ? 
-                    jiraResult.message : 
+                    `Successfully added Test Case link to JIRA issue ${jiraWorkItemId}.` : 
                     `Warning - JIRA update failed: ${jiraResult.message}`);
             } catch (jiraError) {
                 const jiraErrorMessage = jiraError instanceof Error ? jiraError.message : 'Unknown error';
-                messageParts.push(`Warning - Failed to update JIRA issue ${jiraWorkItemId}: ${jiraErrorMessage}`);
+                messageParts.push(`Warning - Failed to link with JIRA issue ${jiraWorkItemId}: ${jiraErrorMessage}`);
             }
         }
 
@@ -648,6 +679,7 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
     async ({ sourcePlanId, sourceSuiteId, destinationPlanId, destinationSuiteId, jiraWorkItemId }) => {
       try {
         // Validate JIRA ID format if provided
+        // isValidJiraId is defined later in the file, this should be fine at runtime
         if (jiraWorkItemId && !isValidJiraId(jiraWorkItemId)) {
           return {
             content: [{ 
@@ -758,6 +790,26 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
 
             // Handle JIRA integration if workItemId is provided
             if (jiraWorkItemId) {
+              // First update each test case description with a Jira link
+              let updateMessages: string[] = [];
+              for (const tcId of sourceTestCaseIds) {
+                const numericTcId = parseInt(tcId, 10);
+                if (isNaN(numericTcId)) {
+                  updateMessages.push(`Warning - Invalid Test Case ID format: ${tcId}. Skipping JIRA link in description.`);
+                  continue;
+                }
+                try {
+                  const updateResult = await updateTestCase({ testCaseId: numericTcId, jiraKey: jiraWorkItemId });
+                  if (!updateResult.success) {
+                    updateMessages.push(`Warning - Failed to update Test Case ${tcId} description: ${updateResult.message}`);
+                  }
+                } catch (error) {
+                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                  updateMessages.push(`Warning - Error updating Test Case ${tcId} description: ${errorMessage}`);
+                }
+              }
+              
+              // Then fetch test case details and add links to JIRA (original logic)
               try {
                 // Create JIRALinks for each test case using the helper function
                 const testCaseLinks = await Promise.all(sourceTestCaseIds.map(async (tcId) => {
@@ -768,13 +820,12 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
                   };
                 }));
 
-                const { addItemToJIRA } = await import('./jiraUtils.js');
                 const jiraResult = await addItemToJIRA(jiraWorkItemId, testCaseLinks);
                 
                 return {
                   content: [{ 
                     type: "text", 
-                    text: `${successMessage} ${jiraResult.success ? jiraResult.message : `Warning - JIRA update failed: ${jiraResult.message}`}` 
+                    text: `${successMessage} ${updateMessages.join(' ')} ${jiraResult.success ? jiraResult.message : `Warning - JIRA update failed: ${jiraResult.message}`}` 
                   }]
                 };
               } catch (error) {
@@ -782,7 +833,7 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
                 return {
                   content: [{ 
                     type: "text", 
-                    text: `${successMessage} Warning - Failed to update JIRA issue ${jiraWorkItemId}: ${errorMessage}`
+                    text: `${successMessage} ${updateMessages.join(' ')} Warning - Failed to add links to JIRA issue ${jiraWorkItemId}: ${errorMessage}` 
                   }]
                 };
               }
