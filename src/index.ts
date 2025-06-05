@@ -5,14 +5,18 @@ import { z } from "zod";
 import 'dotenv/config'
 import axios from 'axios';
 import {
-    addTestCaseToTestSuiteTool, // Renamed import
-    updateAutomatedTestTool, // Renamed import
-    registerTestCaseTool, // Renamed import
-    createStaticTestSuiteTool, // Renamed import
-    copyTestCasesToTestSuiteTool // Added import for the new tool
+    addTestCaseToTestSuiteTool,
+    updateAutomatedTestTool,
+    registerTestCaseTool,
+    createStaticTestSuiteTool,
+    copyTestCasesToTestSuiteTool,
 } from './testCaseUtils.js';
 import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
-import { fetchIssueFromJIRA, CombinedJiraJsonStrings } from './jiraUtils.js'; // Import Jira functionality
+import { 
+    fetchIssueFromJIRA, 
+    CombinedJiraJsonStrings,
+    createJiraSubtasksTool // Added import for Jira subtasks tool
+} from './jiraUtils.js'; // Import Jira functionality
 
 // Create an MCP server
 const server = new McpServer({
@@ -74,11 +78,14 @@ server.tool(
 );
 
 // Register tools from testCaseUtils.ts
-registerTestCaseTool(server); // Renamed function call
-addTestCaseToTestSuiteTool(server); // Renamed function call
-updateAutomatedTestTool(server); // Renamed function call
-createStaticTestSuiteTool(server); // Renamed function call
-copyTestCasesToTestSuiteTool(server); // Register the new tool
+registerTestCaseTool(server);
+addTestCaseToTestSuiteTool(server);
+updateAutomatedTestTool(server);
+createStaticTestSuiteTool(server);
+copyTestCasesToTestSuiteTool(server);
+
+// Register tools from jiraUtils.ts
+createJiraSubtasksTool(server); // Register the Jira subtasks tool
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
