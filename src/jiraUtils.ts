@@ -534,9 +534,10 @@ export function createJiraSubtasksTool(server: McpServer) {
 
         if (!parentJiraId) {
           throw new Error("Parent Jira ID is required");
-        }        if (templateType === "FF") {
+        }        // Set predefined subtask summaries based on templateType
+        if (templateType === "FF") {
           subtaskSummaries = [
-            "Dev - Remove FF",
+            "Dev - FF Work",
             "QA Config Service Updated",
             "Create Test Cases",
             "Execute Test Cases",
@@ -556,9 +557,10 @@ export function createJiraSubtasksTool(server: McpServer) {
           }
         }
         
+        // After template type processing, all paths should have subtaskSummaries populated
+        // This should never happen, but just as a final safeguard:
         if (!subtaskSummaries || subtaskSummaries.length === 0) {
-          // This case should ideally be caught by the logic above, but as a safeguard:
-          throw new Error("Subtask summaries are missing or empty.");
+          throw new Error("Failed to populate subtask summaries. Please check the templateType or provide subtaskSummaries directly.");
         }
         
         const results = await createJIRAsubtasks(parentJiraId, subtaskSummaries);
