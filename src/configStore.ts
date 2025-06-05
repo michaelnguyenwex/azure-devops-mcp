@@ -9,8 +9,14 @@ export const AzureDevOpsConfigSchema = z.object({
 
 export type AzureDevOpsConfig = z.infer<typeof AzureDevOpsConfigSchema>;
 
-// Jira API base URL
-export const JIRA_API_BASE_URL = process.env.JIRA_API_BASE_URL;
+// Jira API base URL - getter function to ensure it's accessed at runtime
+export function getJiraApiBaseUrl(): string {
+  const baseUrl = process.env.JIRA_API_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("JIRA_API_BASE_URL environment variable not set or is empty.");
+  }
+  return baseUrl;
+}
 
 /**
  * Retrieves the Jira Personal Access Token from environment variables.

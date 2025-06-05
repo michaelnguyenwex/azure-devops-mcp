@@ -146,6 +146,18 @@ The following tools are exposed by this MCP server:
         *   `destinationSuiteId` (number): The ID of the parent Test Suite under which the new suite (containing the copied test cases) will be created.
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link all copied test cases to.
 
+7.  **`create-jira-subtasks`**
+    *   Description: Creates subtasks in Jira for a specified parent issue. The subtasks will inherit fields like project, agile team, and sprint from the parent issue.
+    *   Parameters:
+        *   `parentJiraId` (string): The ID of the parent Jira issue (e.g., "CDH-342").
+        *   `subtaskSummaries` (string[]): Array of summary texts for each subtask to create.
+    *   Notes:
+        *   Subtasks automatically inherit certain properties from the parent issue (project, sprint, team).
+        *   Each subtask is created with the standard subtask issue type for your Jira instance.
+        *   Returns an array of results indicating success or failure for each subtask creation.
+        *   `parentJiraId` (string): The ID or key of the parent Jira issue (e.g., "PROJECT-123").
+        *   `subtaskSummaries` (string[]): Array of strings to use as summaries for the subtasks.
+
 ## Development
 
 To build the project from source:

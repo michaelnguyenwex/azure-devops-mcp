@@ -1,7 +1,7 @@
 import { string, z } from "zod";
 import axios, { AxiosError } from 'axios';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { JIRA_API_BASE_URL, getJiraPat } from "./configStore.js";
+import { getJiraApiBaseUrl, getJiraPat } from "./configStore.js";
 
 // Sub-task issue type ID
 // This is a placeholder value and should be replaced with the actual ID from your Jira instance.
@@ -24,11 +24,7 @@ export interface JiraConfig {
  * @throws An error if essential configuration is missing.
  */
 export function getJiraConfig(): JiraConfig {
-  const baseUrl = JIRA_API_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("JIRA_API_BASE_URL environment variable not set or is empty.");
-  }
-  
+  const baseUrl = getJiraApiBaseUrl();
   const pat = getJiraPat();
   
   return { baseUrl, pat };
@@ -62,14 +58,27 @@ export async function fetchJiraAPI(
       data: body,
       transformResponse: method === 'GET' ? (res: any) => res : undefined // Only transform GET responses
     };
-
+    
     const response = await axios(requestConfig);
-
     return method === 'GET' ? response.data : response; // Return raw string for GET, response object for others
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
-      throw new Error(`Jira API ${method} request to ${endpointPath} failed with status ${axiosError.response?.status}: ${axiosError.response?.statusText}. Details: ${axiosError.response?.data}`);
+      
+      // Extract error messages from the response if available
+      let errorDetails = "Unknown error";
+      if (axiosError.response?.data) {
+        const responseData = axiosError.response?.data;
+        if (typeof responseData === 'object' && responseData !== null && 'errors' in responseData) {
+          errorDetails = JSON.stringify(responseData.errors, null, 2);
+        } else if (typeof responseData === 'object') {
+          errorDetails = JSON.stringify(responseData, null, 2);
+        } else {
+          errorDetails = String(responseData);
+        }
+      }
+      
+      throw new Error(`Jira API ${method} request to ${endpointPath} failed with status ${axiosError.response?.status}: ${axiosError.response?.statusText}. Error details: ${errorDetails}`);
     } else {
       // For non-Axios errors, rethrow the original error
       throw error;
@@ -89,11 +98,18 @@ export async function fetchJiraIssueDetails(
   fieldsToFetch: string[] = []
 ): Promise<any> {
   let endpointPath = `/rest/api/3/issue/${issueIdOrKey}`;
-  
-  // Add fields parameter if specified
+    // Add fields parameter if specified
   if (fieldsToFetch.length > 0) {
-    const fieldsParam = fieldsToFetch.join(',');
-    endpointPath += `?fields=${encodeURIComponent(fieldsParam)}`;
+    // Fix for multi-field requests
+    if (fieldsToFetch.length === 1) {
+      // For a single field, use a single parameter
+      endpointPath += `?fields=${encodeURIComponent(fieldsToFetch[0])}`;
+    } else {
+      // For multiple fields, use separate field parameters for each one
+      endpointPath += '?' + fieldsToFetch.map(field => 
+        `fields=${encodeURIComponent(field)}`
+      ).join('&');
+    }
   }
   
   const response = await fetchJiraAPI(endpointPath);
@@ -366,12 +382,9 @@ export async function getSubtaskIssueTypeId(): Promise<string> {
     }
     
     // Fallback to the predefined constant if no subtask type is found
-    console.warn('No subtask issue type found in Jira. Using predefined ID:', JIRA_SUBTASK_ISSUE_TYPE_ID);
     return JIRA_SUBTASK_ISSUE_TYPE_ID;
   } catch (error) {
-    console.error('Error fetching subtask issue type ID:', error);
-    // Fallback to the predefined constant
-    console.warn('Using predefined subtask issue type ID due to error:', JIRA_SUBTASK_ISSUE_TYPE_ID);
+    // Fallback to the predefined constant on error
     return JIRA_SUBTASK_ISSUE_TYPE_ID;
   }
 }
@@ -383,8 +396,12 @@ export async function getSubtaskIssueTypeId(): Promise<string> {
  * @throws An error if the request fails.
  */
 export async function createJiraItem(payload: any): Promise<any> {
-  const response = await fetchJiraAPI('/rest/api/3/issue', 'POST', payload);
-  return response.data;
+  try {
+    const response = await fetchJiraAPI('/rest/api/3/issue', 'POST', payload);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**
@@ -419,8 +436,7 @@ export async function createJIRAsubtasks(
   }
   
   const results: SubtaskCreationResult[] = [];
-  
-  try {
+    try {
     // Get Jira configuration (ensures we have a valid PAT and base URL)
     const jiraConfig = getJiraConfig();
     
@@ -438,11 +454,12 @@ export async function createJIRAsubtasks(
     const sprintValue = parentIssue.fields.customfield_10021;
     
     // Get subtask issue type ID
-    const subtaskIssueTypeId = await getSubtaskIssueTypeId();
+    const subtaskIssueTypeId = JIRA_SUBTASK_ISSUE_TYPE_ID; //await getSubtaskIssueTypeId();
     
     // Process each subtask summary
     for (const summary of subtaskSummaries) {
-      try {        // Build subtask payload with fields that we know exist
+      try {
+        // Build subtask payload with fields that we know exist
         const payload: any = {
           fields: {
             summary: summary.trim(),
@@ -463,11 +480,9 @@ export async function createJIRAsubtasks(
           payload.fields['customfield_10128'] = agileTeamValue;
         }
         
-        if (sprintValue) {
-          payload.fields['customfield_10021'] = sprintValue;
-        }
-        
-        // Create the subtask
+        // Don't add sprint value to subtasks - Jira will handle this automatically
+        // Subtasks inherit sprint from their parent
+          // Create the subtask
         const response = await createJiraItem(payload);
         
         results.push({
@@ -475,11 +490,8 @@ export async function createJIRAsubtasks(
           issueKey: response.key,
           summary
         });
-        
-        console.log(`Successfully created subtask ${response.key} for parent ${parentJiraId}`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`Error creating subtask "${summary}" for parent ${parentJiraId}:`, error);
         
         results.push({
           success: false,
@@ -492,7 +504,6 @@ export async function createJIRAsubtasks(
     return results;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`Error creating subtasks for parent issue ${parentJiraId}:`, error);
     
     // For global error, add a result for each subtask with the same error
     return subtaskSummaries.map(summary => ({
@@ -518,6 +529,14 @@ export function createJiraSubtasksTool(server: McpServer) {
     async (params) => {
       try {
         const { parentJiraId, subtaskSummaries } = params;
+          if (!parentJiraId) {
+          throw new Error("Parent Jira ID is required");
+        }
+        
+        if (!subtaskSummaries || !Array.isArray(subtaskSummaries) || subtaskSummaries.length === 0) {
+          throw new Error("At least one subtask summary is required");
+        }
+        
         const results = await createJIRAsubtasks(parentJiraId, subtaskSummaries);
         
         // Count successful and failed creations
