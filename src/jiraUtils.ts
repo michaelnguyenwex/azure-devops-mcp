@@ -524,17 +524,41 @@ export function createJiraSubtasksTool(server: McpServer) {
     "Creates subtasks in Jira for a specified parent issue. The subtasks will inherit fields like project, agile team, and sprint from the parent issue. Requires JIRA_API_BASE_URL and JIRA_PAT environment variables to be set.",
     {
       parentJiraId: z.string().describe("The ID or key of the parent Jira issue."),
-      subtaskSummaries: z.array(z.string()).describe("Array of strings to use as summaries for the subtasks.")
+      subtaskSummaries: z.array(z.string()).optional().describe("Array of strings to use as summaries for the subtasks. Required if templateType is 'customized' or not provided."),
+      templateType: z.enum(["customized", "FF", "Regular"]).optional().default("customized").describe("The template type for subtask summaries. Defaults to 'customized'.")
     },
     async (params) => {
       try {
-        const { parentJiraId, subtaskSummaries } = params;
-          if (!parentJiraId) {
+        const { parentJiraId, templateType } = params;
+        let { subtaskSummaries } = params;
+
+        if (!parentJiraId) {
           throw new Error("Parent Jira ID is required");
+        }        if (templateType === "FF") {
+          subtaskSummaries = [
+            "Dev - Remove FF",
+            "QA Config Service Updated",
+            "Create Test Cases",
+            "Execute Test Cases",
+            "Create Devops Story for removing FF",
+            "Confluence Document Updated"
+          ];
+        } else if (templateType === "Regular") {
+          subtaskSummaries = [
+            "Dev work",
+            "Write Test Cases",
+            "Execute Test Cases",
+            "Add Test cases in the \"Test Case Link\""
+          ];
+        } else if (templateType === "customized" || !templateType) {
+          if (!subtaskSummaries || !Array.isArray(subtaskSummaries) || subtaskSummaries.length === 0) {
+            throw new Error("At least one subtask summary is required when templateType is 'customized' or not provided.");
+          }
         }
         
-        if (!subtaskSummaries || !Array.isArray(subtaskSummaries) || subtaskSummaries.length === 0) {
-          throw new Error("At least one subtask summary is required");
+        if (!subtaskSummaries || subtaskSummaries.length === 0) {
+          // This case should ideally be caught by the logic above, but as a safeguard:
+          throw new Error("Subtask summaries are missing or empty.");
         }
         
         const results = await createJIRAsubtasks(parentJiraId, subtaskSummaries);

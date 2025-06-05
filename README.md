@@ -132,7 +132,7 @@ The following tools are exposed by this MCP server:
 5.  **`add-testcase-to-testsuite`**
     *   Description: Adds existing test cases to a specified test suite and optionally links them to a JIRA issue.
     *   Parameters:
-        *   `testCaseId` (string): The csv-delim ID string of the Test Case (e.g. 12345,45566).
+        *   `testCaseId` (string): The comma-delim ID string of the Test Case (e.g. 12345,45566).
         *   `planId` (number): The ID of the Test Plan containing the suite.
         *   `suiteId` (number): The ID of the Test Suite.
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link the test case(s) to.
@@ -149,14 +149,13 @@ The following tools are exposed by this MCP server:
 7.  **`create-jira-subtasks`**
     *   Description: Creates subtasks in Jira for a specified parent issue. The subtasks will inherit fields like project, agile team, and sprint from the parent issue.
     *   Parameters:
-        *   `parentJiraId` (string): The ID of the parent Jira issue (e.g., "CDH-342").
-        *   `subtaskSummaries` (string[]): Array of summary texts for each subtask to create.
-    *   Notes:
-        *   Subtasks automatically inherit certain properties from the parent issue (project, sprint, team).
-        *   Each subtask is created with the standard subtask issue type for your Jira instance.
-        *   Returns an array of results indicating success or failure for each subtask creation.
-        *   `parentJiraId` (string): The ID or key of the parent Jira issue (e.g., "PROJECT-123").
-        *   `subtaskSummaries` (string[]): Array of strings to use as summaries for the subtasks.
+        *   `parentJiraId` (string): The ID or key of the parent Jira issue (e.g., "CDH-342").
+        *   `subtaskSummaries` (string[], optional): Array of summary texts for each subtask to create. Required if templateType is 'customized' or not provided.
+        *   `templateType` (string, optional): The template type for subtask summaries. Possible values:
+            *   `"customized"` (default): User must provide subtaskSummaries.
+            *   `"FF"`: Pre-populates with feature flag related subtasks.
+            *   `"Regular"`: Pre-populates with standard development subtasks.
+
 
 ## Development
 
