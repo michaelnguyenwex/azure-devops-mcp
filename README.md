@@ -134,20 +134,19 @@ The following tools are exposed by this MCP server:
     *   Description: Adds existing test cases to a specified test suite and optionally links them to a JIRA issue.
     *   Parameters:
         *   `testCaseIdString` (string): The comma-delim ID string of the Test Case (e.g. 12345,45566).
-        *   `planId` (number): The ID of the Test Plan containing the suite.
-        *   `suiteId` (number): The ID of the Test Suite.
+        *   `planId` (number): The ID of the Test Plan containing the suite.        *   `suiteId` (number): The ID of the Test Suite.
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link the test case(s) to.
-        *   `createCopy` (boolean, optional): When true, creates new copies of the test cases instead of references. Default is true.
+        *   `createCopy` (boolean, optional): When true, creates new copies of the test cases instead of references. Default is false.
 
 6.  **`copy-testcases-to-testsuite`**
     *   Description: Copies all test cases from a source test suite to a new test suite (created with the same name as the source suite) under a specified destination test plan and parent suite, with optional JIRA issue linking.
     *   Parameters:
         *   `sourcePlanId` (number): The ID of the Test Plan containing the source test suite.
         *   `sourceSuiteId` (number): The ID of the source Test Suite from which to copy test cases.
-        *   `destinationPlanId` (number): The ID of the Test Plan where the new suite will be created.
-        *   `destinationSuiteId` (number): The ID of the parent Test Suite under which the new suite (containing the copied test cases) will be created.
+        *   `destinationPlanId` (number): The ID of the Test Plan where the new suite will be created.        *   `destinationSuiteId` (number): The ID of the parent Test Suite under which the new suite (containing the copied test cases) will be created.
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link all copied test cases to.
         *   `createCopy` (boolean, optional): When true, creates new copies of the test cases instead of references. Default is true.
+        *   `createTestSuite` (boolean, optional): When false, the test cases will be added directly to the destinationSuiteId instead of creating a new child suite. Default is true.
 
 7.  **`create-jira-subtasks`**
     *   Description: Creates subtasks in Jira for a specified parent issue. The subtasks will inherit fields like project, agile team, and sprint from the parent issue.
