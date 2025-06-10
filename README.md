@@ -112,8 +112,9 @@ The following tools are exposed by this MCP server:
         *   `parentPlanId` (number, optional): ID of the Test Plan. If provided with `parentSuiteId`, a new child test suite (named after the test case title) is created.
         *   `parentSuiteId` (number, optional): ID of the parent Test Suite for child suite creation.
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link the test case to.
+        *   `createTestSuite` (boolean, optional): When false, the test case will be added directly to the parentSuiteId instead of creating a new child suite. Default is true.
     *   Notes:
-        *   If you didn't provide values for either parentPlanId or parentSuiteId, the func only create the test case without creating the test suite.
+        *   If you don't provide values for either parentPlanId or parentSuiteId, the function only creates the test case without creating the test suite.
 
 3.  **`update-automated-test`**
     *   Description: Updates an Azure DevOps Test Case with automated test details. This is useful when you are creating automated test case and need bind your test code with the test case.
@@ -132,10 +133,11 @@ The following tools are exposed by this MCP server:
 5.  **`add-testcase-to-testsuite`**
     *   Description: Adds existing test cases to a specified test suite and optionally links them to a JIRA issue.
     *   Parameters:
-        *   `testCaseId` (string): The comma-delim ID string of the Test Case (e.g. 12345,45566).
+        *   `testCaseIdString` (string): The comma-delim ID string of the Test Case (e.g. 12345,45566).
         *   `planId` (number): The ID of the Test Plan containing the suite.
         *   `suiteId` (number): The ID of the Test Suite.
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link the test case(s) to.
+        *   `createCopy` (boolean, optional): When true, creates new copies of the test cases instead of references. Default is true.
 
 6.  **`copy-testcases-to-testsuite`**
     *   Description: Copies all test cases from a source test suite to a new test suite (created with the same name as the source suite) under a specified destination test plan and parent suite, with optional JIRA issue linking.
@@ -145,6 +147,7 @@ The following tools are exposed by this MCP server:
         *   `destinationPlanId` (number): The ID of the Test Plan where the new suite will be created.
         *   `destinationSuiteId` (number): The ID of the parent Test Suite under which the new suite (containing the copied test cases) will be created.
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link all copied test cases to.
+        *   `createCopy` (boolean, optional): When true, creates new copies of the test cases instead of references. Default is true.
 
 7.  **`create-jira-subtasks`**
     *   Description: Creates subtasks in Jira for a specified parent issue. The subtasks will inherit fields like project, agile team, and sprint from the parent issue.

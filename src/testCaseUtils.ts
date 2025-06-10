@@ -389,7 +389,7 @@ export function addTestCaseToTestSuiteTool(server: McpServer) {
       planId: z.number().describe("The ID of the Test Plan containing the suite."),
       suiteId: z.number().describe("The ID of the Test Suite to add the test case to."),
       jiraWorkItemId: z.string().optional().describe("Optional. The JIRA issue ID to link the test case(s) to."),
-      createCopy: z.boolean().optional().default(false).describe("Optional. When true, creates new copies of the test cases instead of references.")
+      createCopy: z.boolean().optional().default(true).describe("Optional. When true, creates new copies of the test cases instead of references.")
     },
     async ({ testCaseIdString, planId, suiteId, jiraWorkItemId, createCopy }) => {
       let config;
@@ -756,9 +756,10 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
       sourceSuiteId: z.number().describe("ID of the source Test Suite from which to copy test cases."),
       destinationPlanId: z.number().describe("ID of the destination Test Plan where the new suite will be created."),
       destinationSuiteId: z.number().describe("ID of the parent Test Suite in the destination plan under which the new suite (containing copied test cases) will be created."),
-      jiraWorkItemId: z.string().optional().describe("Optional. The JIRA issue ID to link the copied test cases to.")
+      jiraWorkItemId: z.string().optional().describe("Optional. The JIRA issue ID to link the copied test cases to."),
+      createCopy: z.boolean().optional().default(true).describe("Optional. When true, creates new copies of the test cases instead of references.")
     },
-    async ({ sourcePlanId, sourceSuiteId, destinationPlanId, destinationSuiteId, jiraWorkItemId }) => {
+    async ({ sourcePlanId, sourceSuiteId, destinationPlanId, destinationSuiteId, jiraWorkItemId, createCopy }) => {
       try {
         // Validate JIRA ID format if provided
         // isValidJiraId is defined later in the file, this should be fine at runtime
@@ -863,7 +864,8 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
             pat,
             planId: destinationPlanId,
             suiteId: newlyCreatedDestinationSuiteId,
-            testCaseIds: sourceTestCaseIds.join(',')
+            testCaseIds: sourceTestCaseIds.join(','),
+            createCopy            
           });
           
           if (addResult.success) {
@@ -984,13 +986,13 @@ async function copyTestCaseAndAddToSuite(options: {
       requestBody.push({
         "op": "add",
         "path": "/fields/System.Title",
-        "value": `Copy of ${fields['System.Title']}` // Use a fixed prefix for copied test cases
+        "value": `${fields['System.Title']}` // Use a fixed prefix for copied test cases
       });
     } else {
       requestBody.push({
         "op": "add",
         "path": "/fields/System.Title",
-        "value": `Copy of Test Case ${sourceTestCaseId}`
+        "value": `${sourceTestCaseId}`
       });
     }
     
