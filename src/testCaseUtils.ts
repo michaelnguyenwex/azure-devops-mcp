@@ -274,6 +274,7 @@ export function createStaticTestSuiteTool(server: McpServer) { // Renamed functi
 /**
  * Helper function to add one or more test cases to a specified test suite via Azure DevOps API.
  * @param options - The options for adding test cases.
+ * @param options.createCopy - When true, creates new copies of the test cases instead of references. Default is false.
  * @returns A promise that resolves to an object indicating success or failure and a message.
  */
 async function addTestCasesToSuiteAPI(options: {
@@ -283,60 +284,114 @@ async function addTestCasesToSuiteAPI(options: {
   planId: number;
   suiteId: number;
   testCaseIds: string; // Comma-separated string of test case IDs
-}): Promise<{ success: boolean; message: string; data?: any; errorDetails?: any }> {
-  const { organization, projectName, pat, planId, suiteId, testCaseIds } = options;
+  createCopy?: boolean; // Optional flag to create copies instead of references
+}): Promise<{ success: boolean; message: string; data?: any; newTestCaseIds?: number[]; errorDetails?: any }> {
+  const { organization, projectName, pat, planId, suiteId, testCaseIds, createCopy = false } = options;
 
   if (!testCaseIds || testCaseIds.length === 0) {
     return { success: true, message: "No test cases provided to add." };
   }
 
-  // The API for bulk add to a suite expects POST to /_apis/testplan/Plans/{planId}/Suites/{suiteId}/testcases/{testCaseIds}
-  // where {testCaseIds} is a comma-separated string of IDs in the URL path.
-  const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${testCaseIds}?api-version=7.0`;
+  // If createCopy is false, use the standard reference-based approach
+  if (!createCopy) {
+    // The API for bulk add to a suite expects POST to /_apis/testplan/Plans/{planId}/Suites/{suiteId}/testcases/{testCaseIds}
+    // where {testCaseIds} is a comma-separated string of IDs in the URL path.
+    const addTcToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${testCaseIds}?api-version=7.0`;
 
-  try {
-    // Corrected: Send null as the body, headers in the config (3rd argument)
-    // The API takes test case IDs from the URL path, so no body is needed for this specific endpoint.
-    const response = await axios.post(addTcToSuiteUrl, null, {
-      headers: {
-        'Authorization': `Bearer ${pat}`,
-        'Content-Type': 'application/json' // This content type is standard, even if no body is sent.
+    try {
+      // Corrected: Send null as the body, headers in the config (3rd argument)
+      // The API takes test case IDs from the URL path, so no body is needed for this specific endpoint.
+      const response = await axios.post(addTcToSuiteUrl, null, {
+        headers: {
+          'Authorization': `Bearer ${pat}`,
+          'Content-Type': 'application/json' // This content type is standard, even if no body is sent.
+        }
+      });
+
+      // Assuming success if axios doesn't throw for non-2xx statuses.
+      // The response for this API call is usually an array of the test case references that were added.
+      // Example: response.data.value might contain the added items.
+      // Count can be derived from the input string as a fallback if response doesn't clearly state it.
+      const count = response.data?.count || response.data?.value?.length || testCaseIds.split(',').length; 
+      const message = `Successfully added ${count} test case reference(s) (${testCaseIds}) to suite ${suiteId} in plan ${planId}.`;
+      console.log(message, response.data);
+      return { success: true, message: message, data: response.data };
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error';
+      const azdoErrorDetail = error.response?.data?.message || '';
+      const fullErrorMessage = `Failed to add test case reference(s) (${testCaseIds}) to suite ${suiteId} in plan ${planId}: ${errorMessage}. ${azdoErrorDetail}`.trim();
+      console.error(fullErrorMessage, error.response?.data);
+      return {
+        success: false,
+        message: fullErrorMessage,
+        errorDetails: error.response?.data
+      };
+    }
+  } 
+  // If createCopy is true, create copies of the test cases
+  else {    const testCaseIdsArray = testCaseIds.split(',');
+    const newTestCaseIds: number[] = [];
+    const errors: string[] = [];
+    
+    console.log(`Creating ${testCaseIdsArray.length} new test case(s) as copies...`);
+    
+    // Process each test case sequentially to avoid overwhelming the API
+    for (const sourceTestCaseId of testCaseIdsArray) {
+      try {
+        const result = await copyTestCaseAndAddToSuite({
+          organization,
+          projectName,
+          pat,
+          sourceTestCaseId,
+          planId, 
+          suiteId
+        });
+        
+        if (result.success && result.newTestCaseId) {
+          newTestCaseIds.push(result.newTestCaseId);
+        } else {
+          errors.push(`Failed to copy test case ${sourceTestCaseId}: ${result.message}`);
+        }
+      } catch (error: any) {
+        const errorMessage = error.message || 'Unknown error';
+        errors.push(`Error copying test case ${sourceTestCaseId}: ${errorMessage}`);
       }
-    });
-
-    // Assuming success if axios doesn't throw for non-2xx statuses.
-    // The response for this API call is usually an array of the test case references that were added.
-    // Example: response.data.value might contain the added items.
-    // Count can be derived from the input string as a fallback if response doesn't clearly state it.
-    const count = response.data?.count || response.data?.value?.length || testCaseIds.split(',').length; 
-    const message = `Successfully added ${count} test case(s) (${testCaseIds}) to suite ${suiteId} in plan ${planId}.`;
-    console.log(message, response.data);
-    return { success: true, message: message, data: response.data };
-
-  } catch (error: any) {
-    const errorMessage = error.message || 'Unknown error';
-    const azdoErrorDetail = error.response?.data?.message || '';
-    const fullErrorMessage = `Failed to add test case(s) (${testCaseIds}) to suite ${suiteId} in plan ${planId}: ${errorMessage}. ${azdoErrorDetail}`.trim();
-    console.error(fullErrorMessage, error.response?.data);
-    return {
-      success: false,
-      message: fullErrorMessage,
-      errorDetails: error.response?.data
-    };
+    }      // Generate response based on results
+    if (newTestCaseIds.length > 0) {
+      const successMessage = `Successfully created ${newTestCaseIds.length} new test case(s) as copies of (${testCaseIds}) and added them to suite ${suiteId} in plan ${planId}. New IDs: ${newTestCaseIds.join(', ')}.`;
+      if (errors.length > 0) {
+        return {
+          success: true,
+          message: `${successMessage} With some errors: ${errors.join('; ')}`,
+          newTestCaseIds
+        };
+      } else {
+        return {
+          success: true,
+          message: successMessage,
+          newTestCaseIds
+        };
+      }
+    } else {
+      return {
+        success: false,
+        message: `Failed to create any test case copies. Errors: ${errors.join('; ')}`
+      };
+    }
   }
 }
 
 export function addTestCaseToTestSuiteTool(server: McpServer) {
   server.tool(
     "add-testcase-to-testsuite",
-    "Adds an existing test case to a specified test suite in Azure DevOps and optionally links it to a JIRA issue. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",
-    {
+    "Adds an existing test case to a specified test suite in Azure DevOps and optionally links it to a JIRA issue. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",    {
       testCaseIdString: z.string().describe("The comma-delim string of ID of the Test Case."),
       planId: z.number().describe("The ID of the Test Plan containing the suite."),
       suiteId: z.number().describe("The ID of the Test Suite to add the test case to."),
       jiraWorkItemId: z.string().optional().describe("Optional. The JIRA issue ID to link the test case(s) to."),
+      createCopy: z.boolean().optional().default(false).describe("Optional. When true, creates new copies of the test cases instead of references.")
     },
-    async ({ testCaseIdString, planId, suiteId, jiraWorkItemId }) => {
+    async ({ testCaseIdString, planId, suiteId, jiraWorkItemId, createCopy }) => {
       let config;
       try {
         config = await getAzureDevOpsConfig();
@@ -348,6 +403,11 @@ export function addTestCaseToTestSuiteTool(server: McpServer) {
       const trimmedTestCaseIdString = testCaseIdString.trim();
       if (!trimmedTestCaseIdString) {
         return { content: [{ type: "text", text: "No valid test case IDs provided in the string." }] };
+      }      // Log what mode we're using
+      if (createCopy) {
+        console.log(`Adding test case(s) to suite ${suiteId} as new copies`);
+      } else {
+        console.log(`Adding test case(s) to suite ${suiteId} as references`);
       }
       
       const result = await addTestCasesToSuiteAPI({
@@ -356,14 +416,14 @@ export function addTestCaseToTestSuiteTool(server: McpServer) {
         pat,
         planId,
         suiteId,
-        testCaseIds: trimmedTestCaseIdString
-      });
-
-      if (!result.success) {
+        testCaseIds: trimmedTestCaseIdString,
+        createCopy
+      });if (!result.success) {
+        const errorMode = createCopy ? "copying test cases" : "adding test case references";
         return {
           content: [{ 
             type: "text", 
-            text: result.message 
+            text: `Error while ${errorMode}: ${result.message}` 
           }]
         };
       }
@@ -861,6 +921,129 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
       }
     }
   );
+}
+
+/**
+ * Creates a new copy of a test case based on an existing one and adds it to a test suite.
+ * @param options - Configuration options for copying the test case
+ * @returns A promise that resolves to the ID of the newly created test case
+ */
+async function copyTestCaseAndAddToSuite(options: {
+  organization: string;
+  projectName: string;
+  pat: string;
+  sourceTestCaseId: string | number;
+  planId: number;
+  suiteId: number;
+}): Promise<{ success: boolean; newTestCaseId?: number; message: string; data?: any; errorDetails?: any }> {
+  const { organization, projectName, pat, sourceTestCaseId, planId, suiteId } = options;
+
+  try {
+    // Step 1: Get source test case details
+    console.log(`Fetching details for source test case ${sourceTestCaseId}...`);
+    const sourceTestCaseDetails = await getTestCaseDetails(sourceTestCaseId, { organization, projectName, pat });
+    
+    if (!sourceTestCaseDetails || !sourceTestCaseDetails.fields) {
+      return { 
+        success: false, 
+        message: `Failed to retrieve details for source test case ${sourceTestCaseId}.` 
+      };
+    }
+
+    // Step 2: Create a new test case with the same field values
+    const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3`;
+    
+    const requestBody: any[] = [];
+    
+    // Add all relevant fields from the source test case
+    const fields = sourceTestCaseDetails.fields;
+      // Required fields for a Test Case
+    if (fields['System.Title']) {
+      requestBody.push({
+        "op": "add",
+        "path": "/fields/System.Title",
+        "value": `Copy of ${fields['System.Title']}` // Use a fixed prefix for copied test cases
+      });
+    } else {
+      requestBody.push({
+        "op": "add",
+        "path": "/fields/System.Title",
+        "value": `Copy of Test Case ${sourceTestCaseId}`
+      });
+    }
+    
+    // Common fields to copy
+    const fieldsToCopy = [
+      'System.AreaPath',
+      'System.IterationPath',
+      'Microsoft.VSTS.TCM.Steps',
+      'Microsoft.VSTS.Common.Priority',
+      'System.State',
+      'System.Reason',
+      'Microsoft.VSTS.TCM.AutomationStatus',
+      'Microsoft.VSTS.TCM.AutomatedTestName',
+      'Microsoft.VSTS.TCM.AutomatedTestStorage',
+      'Microsoft.VSTS.TCM.AutomatedTestId',
+      'Microsoft.VSTS.TCM.AutomatedTestType'
+    ];
+    
+    for (const field of fieldsToCopy) {
+      if (fields[field]) {
+        requestBody.push({
+          "op": "add",
+          "path": `/fields/${field}`,
+          "value": fields[field]
+        });
+      }
+    }
+
+    // Create the new test case
+    console.log(`Creating new test case as a copy of ${sourceTestCaseId}...`);
+    const response = await axios.post(apiUrl, requestBody, {
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Content-Type': 'application/json-patch+json'
+      }
+    });
+    
+    const newTestCaseId = response.data.id;
+    
+    if (!newTestCaseId) {
+      return { 
+        success: false,
+        message: `Failed to create copy of test case ${sourceTestCaseId}.`,
+        data: response.data
+      };
+    }
+    
+    // Step 3: Add the new test case to the specified suite
+    console.log(`Adding newly created test case ${newTestCaseId} to suite ${suiteId}...`);
+    const addToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${newTestCaseId}?api-version=7.0`;
+    
+    const addToSuiteResponse = await axios.post(addToSuiteUrl, null, {
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Content-Type': 'application/json' 
+      }
+    });
+    
+    return {
+      success: true,
+      newTestCaseId,
+      message: `Successfully created test case ${newTestCaseId} as a copy of ${sourceTestCaseId} and added it to suite ${suiteId}.`,
+      data: { createResponse: response.data, addToSuiteResponse: addToSuiteResponse.data }
+    };
+  } catch (error: any) {
+    const errorMessage = error.message || 'Unknown error';
+    const azdoErrorDetail = error.response?.data?.message || '';
+    const fullErrorMessage = `Failed to copy test case ${sourceTestCaseId} and add to suite ${suiteId}: ${errorMessage}. ${azdoErrorDetail}`.trim();
+    console.error(fullErrorMessage, error.response?.data);
+    return {
+      success: false,
+      message: fullErrorMessage,
+      errorDetails: error.response?.data
+    };
+  }
 }
 
 /**
