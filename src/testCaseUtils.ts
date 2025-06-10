@@ -757,9 +757,10 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
       destinationPlanId: z.number().describe("ID of the destination Test Plan where the new suite will be created."),
       destinationSuiteId: z.number().describe("ID of the parent Test Suite in the destination plan under which the new suite (containing copied test cases) will be created."),
       jiraWorkItemId: z.string().optional().describe("Optional. The JIRA issue ID to link the copied test cases to."),
-      createCopy: z.boolean().optional().default(true).describe("Optional. When true, creates new copies of the test cases instead of references.")
+      createCopy: z.boolean().optional().default(true).describe("Optional. When true, creates new copies of the test cases instead of references."),
+      createTestSuite: z.boolean().optional().default(true).describe("Optional. When false, the test case will be added directly to the parentSuiteId instead of creating a new child suite. Default is true.")
     },
-    async ({ sourcePlanId, sourceSuiteId, destinationPlanId, destinationSuiteId, jiraWorkItemId, createCopy }) => {
+    async ({ sourcePlanId, sourceSuiteId, destinationPlanId, destinationSuiteId, jiraWorkItemId, createCopy, createTestSuite }) => {
       try {
         // Validate JIRA ID format if provided
         // isValidJiraId is defined later in the file, this should be fine at runtime
@@ -836,40 +837,48 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
           return {
             content: [{ type: "text", text: `Error fetching details for source suite ${sourceSuiteId} (Plan: ${sourcePlanId}): ${errorMessage}. ${azdoErrorDetail}`.trim() }]
           };
+        }        // Determine target suite ID based on createTestSuite parameter
+        let targetSuiteId: number;
+        let suiteOperationMessage: string = '';
+        
+        if (createTestSuite) {
+          // Create/Get Child Destination Test Suite with source suite name
+          try {
+            console.log(`Attempting to create/get destination suite with name '${sourceSuiteName}' under parent suite ${destinationSuiteId} in plan ${destinationPlanId}.`);
+            targetSuiteId = await getOrCreateStaticTestSuite({
+              planId: destinationPlanId,
+              parentSuiteId: destinationSuiteId,
+              suiteName: sourceSuiteName
+            });
+            console.log(`Ensured destination suite '${sourceSuiteName}' (ID: ${targetSuiteId}) exists.`);
+            suiteOperationMessage = `New/existing suite '${sourceSuiteName}' (ID: ${targetSuiteId}) under parent ${destinationSuiteId}`;
+          } catch (error) {
+            console.error(`Error creating/finding destination suite '${sourceSuiteName}':`, error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            return {
+              content: [{ type: "text", text: `Error creating or finding destination suite '${sourceSuiteName}' under parent ${destinationSuiteId} in plan ${destinationPlanId}: ${errorMessage}` }]
+            };
+          }
+        } else {
+          // Use destination suite ID directly
+          targetSuiteId = destinationSuiteId;
+          console.log(`Using destination suite ${destinationSuiteId} directly as target (createTestSuite=false)`);
+          suiteOperationMessage = `Parent suite (ID: ${targetSuiteId})`;
         }
 
-        // Create/Get Destination Test Suite
-        let newlyCreatedDestinationSuiteId: number;
-        try {
-          console.log(`Attempting to create/get destination suite with name '${sourceSuiteName}' under parent suite ${destinationSuiteId} in plan ${destinationPlanId}.`);
-          newlyCreatedDestinationSuiteId = await getOrCreateStaticTestSuite({
-            planId: destinationPlanId,
-            parentSuiteId: destinationSuiteId,
-            suiteName: sourceSuiteName
-          });
-          console.log(`Ensured destination suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}) exists.`);
-        } catch (error) {
-          console.error(`Error creating/finding destination suite '${sourceSuiteName}':`, error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          return {
-            content: [{ type: "text", text: `Error creating or finding destination suite '${sourceSuiteName}' under parent ${destinationSuiteId} in plan ${destinationPlanId}: ${errorMessage}` }]
-          };
-        }
-
-        // Add Test Cases to Destination Suite and handle JIRA integration
+        // Add Test Cases to Target Suite and handle JIRA integration
         try {
           const addResult = await addTestCasesToSuiteAPI({
             organization,
             projectName,
             pat,
             planId: destinationPlanId,
-            suiteId: newlyCreatedDestinationSuiteId,
+            suiteId: targetSuiteId,
             testCaseIds: sourceTestCaseIds.join(','),
             createCopy            
           });
-          
-          if (addResult.success) {
-            const successMessage = `Successfully copied ${sourceTestCaseIds.length} test case(s) from source suite '${sourceSuiteName}' (ID: ${sourceSuiteId}, Plan: ${sourcePlanId}) to new/existing suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}, Plan: ${destinationPlanId}). Test Case IDs: ${sourceTestCaseIds.join(', ')}. API Response: ${addResult.message}`;
+            if (addResult.success) {
+            const successMessage = `Successfully copied ${sourceTestCaseIds.length} test case(s) from source suite '${sourceSuiteName}' (ID: ${sourceSuiteId}, Plan: ${sourcePlanId}) to ${createTestSuite ? `new/existing suite '${sourceSuiteName}'` : `parent suite`} (ID: ${targetSuiteId}, Plan: ${destinationPlanId}). Test Case IDs: ${sourceTestCaseIds.join(', ')}. API Response: ${addResult.message}`;
             console.log(successMessage);
 
             // Handle JIRA integration if workItemId is provided
@@ -924,16 +933,14 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
             }
 
             return { content: [{ type: "text", text: successMessage }] };
-          } else {
-            return {
-              content: [{ type: "text", text: `Error during copy operation after creating suite. Failed to add test cases to destination suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}): ${addResult.message}` }]
+          } else {            return {
+              content: [{ type: "text", text: `Error during copy operation after creating suite. Failed to add test cases to ${createTestSuite ? `destination suite '${sourceSuiteName}'` : `parent suite`} (ID: ${targetSuiteId}): ${addResult.message}` }]
             };
-          }
-        } catch (error) {
-          console.error(`Unexpected error in Step 5 when trying to add test cases to destination suite ${newlyCreatedDestinationSuiteId}:`, error);
+          }        } catch (error) {
+          console.error(`Unexpected error in Step 5 when trying to add test cases to ${createTestSuite ? `destination suite` : `parent suite`} ${targetSuiteId}:`, error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           return {
-            content: [{ type: "text", text: `Unexpected error adding test cases to destination suite '${sourceSuiteName}' (ID: ${newlyCreatedDestinationSuiteId}): ${errorMessage}` }]
+            content: [{ type: "text", text: `Unexpected error adding test cases to ${createTestSuite ? `destination suite '${sourceSuiteName}'` : `parent suite`} (ID: ${targetSuiteId}): ${errorMessage}` }]
           };
         }
 
@@ -995,7 +1002,7 @@ async function copyTestCaseAndAddToSuite(options: {
         "value": `${sourceTestCaseId}`
       });
     }
-    
+
     // Common fields to copy
     const fieldsToCopy = [
       'System.AreaPath',
@@ -1008,7 +1015,8 @@ async function copyTestCaseAndAddToSuite(options: {
       'Microsoft.VSTS.TCM.AutomatedTestName',
       'Microsoft.VSTS.TCM.AutomatedTestStorage',
       'Microsoft.VSTS.TCM.AutomatedTestId',
-      'Microsoft.VSTS.TCM.AutomatedTestType'
+      'Microsoft.VSTS.TCM.AutomatedTestType',
+      "System.Description"
     ];
     
     for (const field of fieldsToCopy) {
