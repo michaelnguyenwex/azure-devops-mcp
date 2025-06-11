@@ -1137,6 +1137,53 @@ export async function updateTestCase(options: {
   }
 }
 
+export function addTestcasesToJIRATool(server: McpServer) {
+  server.tool(
+    "add-testcase-jira",
+    "Associate AZDO test cases to JIRA and update AZDO test cases description with JIRA workitem",
+    {
+      testCaseIdString: z.string().describe("Comma-separated string of AZDO Test Case IDs."),
+      jiraWorkItemId: z.string().describe("The JIRA issue ID to link the test cases to."),
+    },
+    async ({ testCaseIdString, jiraWorkItemId }) => {
+      let config;
+      try {
+        config = await getAzureDevOpsConfig();
+      } catch (err) {
+        return { content: [{ type: "text", text: `Azure DevOps configuration error: ${(err as Error).message}. Please ensure AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables are set.` }] };
+      }
+      const { organization, projectName, pat } = config;
+
+      if (!isValidJiraId(jiraWorkItemId)) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `Invalid JIRA issue ID format: ${jiraWorkItemId}. Expected format is like PROJECT-123.`
+          }]
+        };
+      }
+
+      const trimmedTestCaseIdString = testCaseIdString.trim();
+      if (!trimmedTestCaseIdString) {
+        return { content: [{ type: "text", text: "No valid test case IDs provided in the string." }] };
+      }
+      const testCaseIds = trimmedTestCaseIdString.split(',');
+
+      // Use the existing helper function for JIRA integration
+      // Provide an initial message for the context of this specific tool
+      const initialMessage = `Attempting to associate Test Case(s) ${testCaseIds.join(", ")} with JIRA issue ${jiraWorkItemId} and update their descriptions.`;
+      return handleJiraIntegrationForCopiedTestCases(
+        jiraWorkItemId,
+        testCaseIds,
+        organization,
+        projectName,
+        pat,
+        initialMessage
+      );
+    }
+  );
+}
+
 /**
  * Handles JIRA integration for copied test cases.
  * Updates test case descriptions with JIRA links and adds links to the JIRA issue.

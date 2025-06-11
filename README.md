@@ -158,6 +158,12 @@ The following tools are exposed by this MCP server:
             *   `"FF"`: Pre-populates with feature flag related subtasks.
             *   `"Regular"`: Pre-populates with standard development subtasks.
 
+8.  **`add-testcase-jira`**
+    *   Description: Associate AZDO test cases to JIRA and update AZDO test cases description with JIRA workitem.
+    *   Parameters:
+        *   `testCaseIdString` (string): Comma-separated string of AZDO Test Case IDs.
+        *   `jiraWorkItemId` (string): The JIRA issue ID to link the test cases to.
+
 
 ## Development
 
