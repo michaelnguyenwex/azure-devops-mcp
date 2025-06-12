@@ -906,35 +906,20 @@ async function copyTestCaseAndAddToSuite(options: {
     }
 
     // Step 2: Create a new test case with the same field values
-    const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3`;
+    const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.2-preview.3`;
     
     const requestBody: any[] = [];
     
     // Add all relevant fields from the source test case
     const fields = sourceTestCaseDetails.fields;
-      // Required fields for a Test Case
-    if (fields['System.Title']) {
-      requestBody.push({
-        "op": "add",
-        "path": "/fields/System.Title",
-        "value": `${fields['System.Title']}` // Use a fixed prefix for copied test cases
-      });
-    } else {
-      requestBody.push({
-        "op": "add",
-        "path": "/fields/System.Title",
-        "value": `${sourceTestCaseId}`
-      });
-    }
 
     // Common fields to copy
     const fieldsToCopy = [
+      'System.Title',
       'System.AreaPath',
       'System.IterationPath',
       'Microsoft.VSTS.TCM.Steps',
       'Microsoft.VSTS.Common.Priority',
-      'System.State',
-      'System.Reason',
       'Microsoft.VSTS.TCM.AutomationStatus',
       'Microsoft.VSTS.TCM.AutomatedTestName',
       'Microsoft.VSTS.TCM.AutomatedTestStorage',
@@ -950,7 +935,7 @@ async function copyTestCaseAndAddToSuite(options: {
           "path": `/fields/${field}`,
           "value": fields[field]
         });
-      }
+      }      
     }
 
     // Create the new test case
@@ -974,7 +959,7 @@ async function copyTestCaseAndAddToSuite(options: {
     
     // Step 3: Add the new test case to the specified suite
     console.log(`Adding newly created test case ${newTestCaseId} to suite ${suiteId}...`);
-    const addToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${newTestCaseId}?api-version=7.0`;
+    const addToSuiteUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/test/Plans/${planId}/Suites/${suiteId}/testcases/${newTestCaseId}?api-version=7.2-preview.3`;
     
     const addToSuiteResponse = await axios.post(addToSuiteUrl, null, {
       headers: {
@@ -1045,7 +1030,7 @@ export function isValidJiraId(jiraId: string): boolean {
  * @returns Object containing test case details including title and URL
  */
 async function getTestCaseDetails(testCaseId: string | number, config: { organization: string; projectName: string; pat: string }) {
-  const testCaseDetailsUrl = `https://dev.azure.com/${config.organization}/${config.projectName}/_apis/wit/workitems/${testCaseId}?api-version=7.1-preview.3`;
+  const testCaseDetailsUrl = `https://dev.azure.com/${config.organization}/${config.projectName}/_apis/wit/workitems/${testCaseId}?api-version=7.2-preview.3`;
   
   try {
     const response = await axios.get(testCaseDetailsUrl, {
