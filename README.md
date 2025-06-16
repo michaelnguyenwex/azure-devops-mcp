@@ -165,6 +165,13 @@ The following tools are exposed by this MCP server:
     *   Returns:
         *   A list of test cases with their details including work item information.
 
+9.  **`generate-release-sheet`**
+    *   Description: Retrieves all test suites from a specified test plan in Azure DevOps.
+    *   Parameters:
+        *   `planId` (number): The ID of the Test Plan to get suites from.
+    *   Returns:
+        *   A list of test suites with their details including parent-child relationships.
+
 
 ## Development
 

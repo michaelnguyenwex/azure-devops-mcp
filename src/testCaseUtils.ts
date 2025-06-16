@@ -879,6 +879,46 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
 }
 
 /**
+ * Retrieves all test suites within a plan
+ * @param params Object containing planId and suiteId
+ * @returns A promise that resolves to the list of test suites
+ */
+async function getSuitesFromPlan({ planId }: { planId: number}) {
+  const { organization, projectName, pat } = await getAzureDevOpsConfig();
+  
+  try {
+    // Construct the API URL for getting test cases from a suite
+    const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/suites?api-version=7.2-preview.1&expand=children`;
+    
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`:${pat}`).toString('base64')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Return the test cases from the response
+    return {
+      success: true,
+      testSuites: response.data.value || [],
+      message: `Retrieved ${response.data.value?.length || 0} test case(s) in plan ${planId}`
+    };
+  } catch (error) {
+    console.error('Error retrieving test cases from suite:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const azdoErrorDetail = axios.isAxiosError(error) && error.response?.data?.message 
+      ? `Azure DevOps API Error: ${error.response.data.message}` 
+      : '';
+    
+    return {
+      success: false,
+      testCases: [],
+      message: `Failed to retrieve test cases in plan ${planId}. Error: ${errorMessage}. ${azdoErrorDetail}`.trim()
+    };
+  }
+}
+
+/**
  * Retrieves all test cases from a test suite within a plan
  * @param params Object containing planId and suiteId
  * @returns A promise that resolves to the list of test cases
@@ -1042,7 +1082,7 @@ export async function constructAzDoTestCaseUrl(testCaseId: number | string, test
     : '';
   
   // For test cases, use the _testCase endpoint for a better view
-  return `https://dev.azure.com/${config.organization}/${config.projectName}/_testCase/${testCaseId}${urlTitle ? '?title=' + urlTitle : ''}`;
+  return `https://dev.azure.com/${config.organization}/${config.projectName}/_workitems/edit/${testCaseId}`;
 }
 
 /**
@@ -1264,6 +1304,66 @@ export function getTestCasesFromTestSuiteTool(server: McpServer) {
           content: [{ 
             type: "text", 
             text: `Error retrieving test cases from suite ${args.suiteId} in plan ${args.planId}: ${errorMessage}`
+          }],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
+/**
+ * Registers a tool to get all test cases from a test suite in Azure DevOps.
+ * This is an MCP wrapper around the getTestCasesFromSuites function.
+ */
+export function getSuitesFromPlanTool(server: McpServer) {
+  server.tool(
+    "generate-release-sheet",
+    "Generate production release spreadsheet. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",
+    {
+      planId: z.number().describe("The ID of the Test Plan.")    },
+    async (args, _) => {
+      try {
+        // Config (org, project, pat) is sourced within getTestCasesFromSuites via getAzureDevOpsConfig
+        const result = await getSuitesFromPlan({
+          planId: args.planId
+        });
+
+        if (result.success) {
+          return {
+            structuredContent: {
+              testSuites: result.testSuites
+            },
+            content: [
+              { 
+                type: "text", 
+                text: `Successfully retrieved ${result.testSuites.length} test suites in plan ${args.planId}.`
+              }
+            ]
+          };
+        } else {
+          return {
+            structuredContent: {
+              error: result.message
+            },
+            content: [{ 
+              type: "text", 
+              text: `Error retrieving test cases: ${result.message}`
+            }],
+            isError: true
+          };
+        }
+      } catch (error) {
+        console.error('Error in get-all-testcases-from-testsuite tool:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        return {
+          structuredContent: {
+            error: errorMessage
+          },
+          content: [{ 
+            type: "text", 
+            text: `Error retrieving test suite in plan ${args.planId}: ${errorMessage}`
           }],
           isError: true
         };
