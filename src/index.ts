@@ -8,9 +8,9 @@ import {
     addTestCaseToTestSuiteTool,
     updateAutomatedTestTool,
     registerTestCaseTool,
-    createStaticTestSuiteTool,
     copyTestCasesToTestSuiteTool,
-    addTestcasesToJIRATool, // Added import for the new tool
+    addTestcasesToJIRATool,
+    getTestCasesFromTestSuiteTool, // Added import for the new tool
 } from './testCaseUtils.js';
 import { getAzureDevOpsConfig } from './configStore.js'; // Import the global config function
 import { 
@@ -82,9 +82,9 @@ server.tool(
 registerTestCaseTool(server);
 addTestCaseToTestSuiteTool(server);
 updateAutomatedTestTool(server);
-createStaticTestSuiteTool(server);
 copyTestCasesToTestSuiteTool(server);
-addTestcasesToJIRATool(server); // Register the new tool
+addTestcasesToJIRATool(server);
+getTestCasesFromTestSuiteTool(server); // Register the new tool
 
 // Register tools from jiraUtils.ts
 createJiraSubtasksTool(server); // Register the Jira subtasks tool

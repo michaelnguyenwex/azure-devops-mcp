@@ -879,6 +879,46 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
 }
 
 /**
+ * Retrieves all test cases from a test suite within a plan
+ * @param params Object containing planId and suiteId
+ * @returns A promise that resolves to the list of test cases
+ */
+async function getTestCasesFromSuites({ planId, suiteId }: { planId: number, suiteId: number }) {
+  const { organization, projectName, pat } = await getAzureDevOpsConfig();
+  
+  try {
+    // Construct the API URL for getting test cases from a suite
+    const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/Suites/${suiteId}/TestCase?isRecursive=true&api-version=7.2-preview.3`;
+    
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`:${pat}`).toString('base64')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Return the test cases from the response
+    return {
+      success: true,
+      testCases: response.data.value || [],
+      message: `Retrieved ${response.data.value?.length || 0} test case(s) from suite ${suiteId} in plan ${planId}`
+    };
+  } catch (error) {
+    console.error('Error retrieving test cases from suite:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const azdoErrorDetail = axios.isAxiosError(error) && error.response?.data?.message 
+      ? `Azure DevOps API Error: ${error.response.data.message}` 
+      : '';
+    
+    return {
+      success: false,
+      testCases: [],
+      message: `Failed to retrieve test cases from suite ${suiteId} in plan ${planId}. Error: ${errorMessage}. ${azdoErrorDetail}`.trim()
+    };
+  }
+}
+
+/**
  * Creates a new copy of a test case based on an existing one and adds it to a test suite.
  * @param options - Configuration options for copying the test case
  * @returns A promise that resolves to the ID of the newly created test case
@@ -1170,7 +1210,70 @@ export function addTestcasesToJIRATool(server: McpServer) {
 }
 
 /**
- * Handles JIRA integration for copied test cases.
+ * Registers a tool to get all test cases from a test suite in Azure DevOps.
+ * This is an MCP wrapper around the getTestCasesFromSuites function.
+ */
+export function getTestCasesFromTestSuiteTool(server: McpServer) {
+  server.tool(
+    "get-all-testcases-from-testsuite",
+    "Retrieves all test cases from a specified test suite in Azure DevOps. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",
+    {
+      planId: z.number().describe("The ID of the Test Plan."),
+      suiteId: z.number().describe("The ID of the Test Suite to get test cases from."),
+    },
+    async (args, _) => {
+      try {
+        // Config (org, project, pat) is sourced within getTestCasesFromSuites via getAzureDevOpsConfig
+        const result = await getTestCasesFromSuites({
+          planId: args.planId,
+          suiteId: args.suiteId
+        });
+
+        if (result.success) {
+          return {
+            structuredContent: {
+              testCases: result.testCases
+            },
+            content: [
+              { 
+                type: "text", 
+                text: `Successfully retrieved ${result.testCases.length} test case(s) from suite ${args.suiteId} in plan ${args.planId}.`
+              }
+            ]
+          };
+        } else {
+          return {
+            structuredContent: {
+              error: result.message
+            },
+            content: [{ 
+              type: "text", 
+              text: `Error retrieving test cases: ${result.message}`
+            }],
+            isError: true
+          };
+        }
+      } catch (error) {
+        console.error('Error in get-all-testcases-from-testsuite tool:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        return {
+          structuredContent: {
+            error: errorMessage
+          },
+          content: [{ 
+            type: "text", 
+            text: `Error retrieving test cases from suite ${args.suiteId} in plan ${args.planId}: ${errorMessage}`
+          }],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
+/**
+ * Handles integration with JIRA for copied test cases.
  * Updates test case descriptions with JIRA links and adds links to the JIRA issue.
  */
 async function handleJiraIntegrationForCopiedTestCases(

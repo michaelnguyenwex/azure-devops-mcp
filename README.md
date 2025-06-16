@@ -123,14 +123,7 @@ The following tools are exposed by this MCP server:
         *   `automatedTestName` (string): The fully qualified name of the automated test method.
         *   `automatedTestStorage` (string): The name of the test assembly or DLL.
 
-4.  **`create-static-testsuite`**
-    *   Description: Creates a new Static Test Suite or finds an existing one.
-    *   Parameters:
-        *   `planId` (number): The ID of the Test Plan.
-        *   `parentSuiteId` (number): The ID of the parent Test Suite.
-        *   `suiteName` (string): The name of the static test suite.
-
-5.  **`add-testcase-to-testsuite`**
+4.  **`add-testcase-to-testsuite`**
     *   Description: Adds existing test cases to a specified test suite and optionally links them to a JIRA issue.
     *   Parameters:
         *   `testCaseIdString` (string): The comma-delim ID string of the Test Case (e.g. 12345,45566).
@@ -138,7 +131,7 @@ The following tools are exposed by this MCP server:
         *   `jiraWorkItemId` (string, optional): The JIRA issue ID to link the test case(s) to.
         *   `createCopy` (boolean, optional): When true, creates new copies of the test cases instead of references. Default is false.
 
-6.  **`copy-testcases-to-testsuite`**
+5.  **`copy-testcases-to-testsuite`**
     *   Description: Copies all test cases from a source test suite to a new test suite (created with the same name as the source suite) under a specified destination test plan and parent suite, with optional JIRA issue linking.
     *   Parameters:
         *   `sourcePlanId` (number): The ID of the Test Plan containing the source test suite.
@@ -148,7 +141,7 @@ The following tools are exposed by this MCP server:
         *   `createCopy` (boolean, optional): When true, creates new copies of the test cases instead of references. Default is true.
         *   `createTestSuite` (boolean, optional): When false, the test cases will be added directly to the destinationSuiteId instead of creating a new child suite. Default is true.
 
-7.  **`create-jira-subtasks`**
+6.  **`create-jira-subtasks`**
     *   Description: Creates subtasks in Jira for a specified parent issue. The subtasks will inherit fields like project, agile team, and sprint from the parent issue.
     *   Parameters:
         *   `parentJiraId` (string): The ID or key of the parent Jira issue (e.g., "CDH-342").
@@ -158,11 +151,19 @@ The following tools are exposed by this MCP server:
             *   `"FF"`: Pre-populates with feature flag related subtasks.
             *   `"Regular"`: Pre-populates with standard development subtasks.
 
-8.  **`add-testcase-jira`**
+7.  **`add-testcase-jira`**
     *   Description: Associate AZDO test cases to JIRA and update AZDO test cases description with JIRA workitem.
     *   Parameters:
         *   `testCaseIdString` (string): Comma-separated string of AZDO Test Case IDs.
         *   `jiraWorkItemId` (string): The JIRA issue ID to link the test cases to.
+
+8.  **`get-all-testcases-from-testsuite`**
+    *   Description: Retrieves all test cases from a specified test suite in Azure DevOps.
+    *   Parameters:
+        *   `planId` (number): The ID of the Test Plan containing the suite.
+        *   `suiteId` (number): The ID of the Test Suite to get test cases from.
+    *   Returns:
+        *   A list of test cases with their details including work item information.
 
 
 ## Development
