@@ -681,7 +681,7 @@ export function updateAutomatedTestTool(server: McpServer) { // Renamed function
     UpdateAutomatedTestSchema.shape, 
     async (params: z.infer<typeof UpdateAutomatedTestSchema>) => { 
       try {
-        // Config (org, project, pat) is sourced within updateAutomatedTest via getAzureDevOpsConfig
+        // Config (org, pat) is sourced within updateAutomatedTest via getAzureDevOpsConfig
         const result = await updateAutomatedTest(params); 
 
         if (result.success) {
@@ -878,45 +878,6 @@ export function copyTestCasesToTestSuiteTool(server: McpServer) {
   );
 }
 
-/**
- * Retrieves all test suites within a plan
- * @param params Object containing planId and suiteId
- * @returns A promise that resolves to the list of test suites
- */
-async function getSuitesFromPlan({ planId }: { planId: number}) {
-  const { organization, projectName, pat } = await getAzureDevOpsConfig();
-  
-  try {
-    // Construct the API URL for getting test cases from a suite
-    const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/suites?api-version=7.2-preview.1&expand=children`;
-    
-    const response = await axios.get(apiUrl, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`:${pat}`).toString('base64')}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Return the test cases from the response
-    return {
-      success: true,
-      testSuites: response.data.value || [],
-      message: `Retrieved ${response.data.value?.length || 0} test case(s) in plan ${planId}`
-    };
-  } catch (error) {
-    console.error('Error retrieving test cases from suite:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const azdoErrorDetail = axios.isAxiosError(error) && error.response?.data?.message 
-      ? `Azure DevOps API Error: ${error.response.data.message}` 
-      : '';
-    
-    return {
-      success: false,
-      testCases: [],
-      message: `Failed to retrieve test cases in plan ${planId}. Error: ${errorMessage}. ${azdoErrorDetail}`.trim()
-    };
-  }
-}
 
 /**
  * Retrieves all test cases from a test suite within a plan
@@ -932,11 +893,11 @@ async function getTestCasesFromSuites({ planId, suiteId }: { planId: number, sui
     
     const response = await axios.get(apiUrl, {
       headers: {
-        'Authorization': `Basic ${Buffer.from(`:${pat}`).toString('base64')}`,
+        'Authorization': `Bearer ${pat}`,
         'Content-Type': 'application/json'
       }
     });
-
+    
     // Return the test cases from the response
     return {
       success: true,
@@ -954,6 +915,80 @@ async function getTestCasesFromSuites({ planId, suiteId }: { planId: number, sui
       success: false,
       testCases: [],
       message: `Failed to retrieve test cases from suite ${suiteId} in plan ${planId}. Error: ${errorMessage}. ${azdoErrorDetail}`.trim()
+    };
+  }
+}
+
+/**
+ * Retrieves child test suites for a specific test suite within a plan
+ * @param params Object containing planId and suiteId
+ * @returns A promise that resolves to the list of child test suites
+ */
+async function getChildTestSuites({ planId, suiteId }: { planId: number, suiteId: number }) {
+  const { organization, projectName, pat } = await getAzureDevOpsConfig();
+  
+  try {
+    // First, get all suites for the plan with the tree structure
+    const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/testplan/Plans/${planId}/suites?asTreeView=true&api-version=7.2-preview.1`;
+    
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Content-Type': 'application/json'
+      }
+    });    // Process the response to find the specific suite and its children
+    let targetSuite: any = null;
+    
+    // Define a recursive function to find the suite by ID
+    const findSuite = (suites: any[]): any => {
+      if (!suites || !Array.isArray(suites)) return null;
+      
+      for (const suite of suites) {
+        if (suite.id === suiteId) {
+          return suite;
+        }
+        
+        if (suite.children) {
+          const found: any = findSuite(suite.children);
+          if (found) return found;
+        }
+      }
+      
+      return null;
+    };
+
+    // Find the target suite in the tree
+    if (response.data.value && Array.isArray(response.data.value)) {
+      targetSuite = findSuite(response.data.value);
+    }
+
+    if (!targetSuite) {
+      return {
+        success: false,
+        childSuites: [],
+        message: `Could not find test suite with ID ${suiteId} in plan ${planId}`
+      };
+    }
+
+    // Return the children of the target suite
+    const childSuites = targetSuite.children || [];
+    
+    return {
+      success: true,
+      childSuites,
+      message: `Retrieved ${childSuites.length} child test suite(s) for suite ${suiteId} in plan ${planId}`
+    };
+  } catch (error) {
+    console.error('Error retrieving child test suites:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const azdoErrorDetail = axios.isAxiosError(error) && error.response?.data?.message 
+      ? `Azure DevOps API Error: ${error.response.data.message}` 
+      : '';
+    
+    return {
+      success: false,
+      childSuites: [],
+      message: `Failed to retrieve child test suites for suite ${suiteId} in plan ${planId}. Error: ${errorMessage}. ${azdoErrorDetail}`.trim()
     };
   }
 }
@@ -1271,13 +1306,10 @@ export function getTestCasesFromTestSuiteTool(server: McpServer) {
 
         if (result.success) {
           return {
-            structuredContent: {
-              testCases: result.testCases
-            },
             content: [
               { 
                 type: "text", 
-                text: `Successfully retrieved ${result.testCases.length} test case(s) from suite ${args.suiteId} in plan ${args.planId}.`
+                text: JSON.stringify( result.testCases, null, 2)
               }
             ]
           };
@@ -1313,57 +1345,51 @@ export function getTestCasesFromTestSuiteTool(server: McpServer) {
 }
 
 /**
- * Registers a tool to get all test cases from a test suite in Azure DevOps.
- * This is an MCP wrapper around the getTestCasesFromSuites function.
+ * Registers a tool to get all child test suites for a specific test suite in Azure DevOps.
+ * This is an MCP wrapper around the getChildTestSuites function.
  */
-export function getSuitesFromPlanTool(server: McpServer) {
+export function getChildTestSuitesTool(server: McpServer) {
   server.tool(
-    "generate-release-sheet",
-    "Generate production release spreadsheet. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",
+    "get-child-test-suites",
+    "Retrieves all child test suites for a specific test suite in Azure DevOps. Requires AZDO_ORG, AZDO_PROJECT, and AZDO_PAT environment variables to be set.",
     {
-      planId: z.number().describe("The ID of the Test Plan.")    },
+      planId: z.number().describe("The ID of the Test Plan."),
+      suiteId: z.number().describe("The ID of the parent Test Suite to get child suites from."),
+    },
     async (args, _) => {
       try {
-        // Config (org, project, pat) is sourced within getTestCasesFromSuites via getAzureDevOpsConfig
-        const result = await getSuitesFromPlan({
-          planId: args.planId
+        // Config (org, project, pat) is sourced within getChildTestSuites via getAzureDevOpsConfig
+        const result = await getChildTestSuites({
+          planId: args.planId,
+          suiteId: args.suiteId
         });
 
         if (result.success) {
           return {
-            structuredContent: {
-              testSuites: result.testSuites
-            },
             content: [
               { 
                 type: "text", 
-                text: `Successfully retrieved ${result.testSuites.length} test suites in plan ${args.planId}.`
+                text: JSON.stringify(result.childSuites, null, 2)
               }
             ]
           };
         } else {
           return {
-            structuredContent: {
-              error: result.message
-            },
             content: [{ 
               type: "text", 
-              text: `Error retrieving test cases: ${result.message}`
+              text: `Error retrieving child test suites: ${result.message}`
             }],
             isError: true
           };
         }
       } catch (error) {
-        console.error('Error in get-all-testcases-from-testsuite tool:', error);
+        console.error('Error in get-child-test-suites tool:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         
         return {
-          structuredContent: {
-            error: errorMessage
-          },
           content: [{ 
             type: "text", 
-            text: `Error retrieving test suite in plan ${args.planId}: ${errorMessage}`
+            text: `Error retrieving child test suites for suite ${args.suiteId} in plan ${args.planId}: ${errorMessage}`
           }],
           isError: true
         };
