@@ -19,6 +19,23 @@ import {
     CombinedJiraJsonStrings,
     createJiraSubtasksTool // Added import for Jira subtasks tool
 } from './jiraUtils.js'; // Import Jira functionality
+import {
+  searchSplunkTool,
+  listSavedSearchesTool,
+  splunkPingTool,
+  getIndexesAndSourcetypesTool // optional
+} from './integrations/splunk/tools/index.js';
+import { initializeSplunkClient } from './integrations/splunk/client.js';
+import { getSplunkConfig } from './configStore.js';
+
+// Initialize Splunk client if configured
+try {
+  const splunkConfig = await getSplunkConfig();
+  initializeSplunkClient(splunkConfig);
+  console.log('✅ Splunk client initialized');
+} catch (error) {
+  console.log('ℹ️  Splunk not configured (optional):', error instanceof Error ? error.message : 'Unknown error');
+}
 
 // Create an MCP server
 const server = new McpServer({
@@ -90,6 +107,12 @@ getChildTestSuitesTool(server); // Register the child test suites tool
 
 // Register tools from jiraUtils.ts
 createJiraSubtasksTool(server); // Register the Jira subtasks tool
+
+// Register Splunk tools
+searchSplunkTool(server);
+listSavedSearchesTool(server);
+splunkPingTool(server);
+getIndexesAndSourcetypesTool(server); // optional
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
