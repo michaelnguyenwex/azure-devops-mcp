@@ -9,6 +9,17 @@ export const AzureDevOpsConfigSchema = z.object({
 
 export type AzureDevOpsConfig = z.infer<typeof AzureDevOpsConfigSchema>;
 
+// Zod schema for Splunk configuration validation
+export const SplunkConfigSchema = z.object({
+  host: z.string().min(1, "Splunk host cannot be empty."),
+  port: z.number().positive("Splunk port must be a positive number."),
+  scheme: z.enum(['http', 'https'], { errorMap: () => ({ message: "Splunk scheme must be 'http' or 'https'." }) }),
+  token: z.string().min(1, "Splunk token cannot be empty."),
+  verifySsl: z.boolean(),
+});
+
+export type SplunkConfig = z.infer<typeof SplunkConfigSchema>;
+
 // Jira API base URL - getter function to ensure it's accessed at runtime
 export function getJiraApiBaseUrl(): string {
   const baseUrl = process.env.JIRA_API_BASE_URL;
@@ -52,4 +63,45 @@ export async function getAzureDevOpsConfig(): Promise<AzureDevOpsConfig> {
   }
 
   return { organization, projectName, pat }; // Added PAT to return object
+}
+
+/**
+ * Retrieves the Splunk configuration from environment variables.
+ * @returns A promise that resolves to the SplunkConfig object.
+ * @throws An error if the environment variables are not set, are empty, or fail validation.
+ */
+export async function getSplunkConfig(): Promise<SplunkConfig> {
+  const host = process.env.SPLUNK_HOST;
+  const port = process.env.SPLUNK_PORT;
+  const scheme = process.env.SPLUNK_SCHEME;
+  const token = process.env.SPLUNK_TOKEN;
+  const verifySsl = process.env.VERIFY_SSL;
+
+  if (!host) {
+    throw new Error("Splunk host environment variable 'SPLUNK_HOST' is not set or is empty.");
+  }
+  if (!port) {
+    throw new Error("Splunk port environment variable 'SPLUNK_PORT' is not set or is empty.");
+  }
+  if (!scheme) {
+    throw new Error("Splunk scheme environment variable 'SPLUNK_SCHEME' is not set or is empty.");
+  }
+  if (!token) {
+    throw new Error("Splunk token environment variable 'SPLUNK_TOKEN' is not set or is empty.");
+  }
+  if (verifySsl === undefined) {
+    throw new Error("Splunk verify SSL environment variable 'VERIFY_SSL' is not set.");
+  }
+
+  // Parse and validate the configuration
+  const config: SplunkConfig = {
+    host,
+    port: parseInt(port, 10),
+    scheme: scheme as 'http' | 'https',
+    token,
+    verifySsl: verifySsl === 'true'
+  };
+
+  // Validate using Zod schema
+  return SplunkConfigSchema.parse(config);
 }
