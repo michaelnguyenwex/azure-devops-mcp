@@ -2,12 +2,10 @@ import axios, { AxiosInstance } from 'axios';
 import https from 'https';
 import { SplunkConfig, SplunkError } from './types.js';
 import { SearchEndpoint } from './endpoints/search.js';
-import { SavedSearchesEndpoint } from './endpoints/saved-searches.js';
 
 export class SplunkClient {
   private axios: AxiosInstance;
   public search: SearchEndpoint;
-  public savedSearches: SavedSearchesEndpoint;
 
   constructor(config: SplunkConfig) {
     const httpsAgent = config.verifySsl 
@@ -39,7 +37,6 @@ export class SplunkClient {
     );
 
     this.search = new SearchEndpoint(this);
-    this.savedSearches = new SavedSearchesEndpoint(this);
   }
 
   async request<T>(
