@@ -67,18 +67,32 @@ export async function getAzureDevOpsConfig(): Promise<AzureDevOpsConfig> {
 
 /**
  * Retrieves the Splunk configuration from environment variables.
+ * Supports both SPLUNK_URL (full URL) and SPLUNK_HOST (hostname only).
  * @returns A promise that resolves to the SplunkConfig object.
  * @throws An error if the environment variables are not set, are empty, or fail validation.
  */
 export async function getSplunkConfig(): Promise<SplunkConfig> {
-  const host = process.env.SPLUNK_HOST;
-  const port = process.env.SPLUNK_PORT;
-  const scheme = process.env.SPLUNK_SCHEME;
+  let host = process.env.SPLUNK_HOST;
+  let port = process.env.SPLUNK_PORT;
+  let scheme = process.env.SPLUNK_SCHEME;
   const token = process.env.SPLUNK_TOKEN;
   const verifySsl = process.env.VERIFY_SSL;
 
+  // If SPLUNK_URL is provided, parse it to extract host, port, and scheme
+  const splunkUrl = process.env.SPLUNK_URL;
+  if (splunkUrl && !host) {
+    try {
+      const url = new URL(splunkUrl);
+      host = url.hostname;
+      port = port || url.port || (url.protocol === 'https:' ? '8089' : '8089');
+      scheme = scheme || (url.protocol === 'https:' ? 'https' : 'http');
+    } catch (error) {
+      throw new Error(`Invalid SPLUNK_URL format: ${splunkUrl}`);
+    }
+  }
+
   if (!host) {
-    throw new Error("Splunk host environment variable 'SPLUNK_HOST' is not set or is empty.");
+    throw new Error("Splunk host environment variable 'SPLUNK_HOST' or 'SPLUNK_URL' is not set or is empty.");
   }
   if (!port) {
     throw new Error("Splunk port environment variable 'SPLUNK_PORT' is not set or is empty.");
