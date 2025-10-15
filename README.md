@@ -4,14 +4,23 @@
 
 ## Features
 
-*   Fetch Azure DevOps work item and JIRA issue details
-*   Create new test cases with detailed steps, priority, and assignments
-*   Optionally create child test suites under a parent plan/suite when creating test cases
-*   Update test cases with automation details
-*   Create or retrieve static test suites
-*   Add existing test cases to test suites
-*   Link test cases to JIRA issues with automatic ADF formatting
-*   Copy test cases between suites with optional JIRA linking
+*   **Azure DevOps Integration:**
+    *   Fetch work item details
+    *   Create new test cases with detailed steps, priority, and assignments
+    *   Optionally create child test suites under a parent plan/suite when creating test cases
+    *   Update test cases with automation details
+    *   Create or retrieve static test suites
+    *   Add existing test cases to test suites
+    *   Copy test cases between suites
+*   **JIRA Integration:**
+    *   Fetch JIRA issue details
+    *   Link test cases to JIRA issues with automatic ADF formatting
+    *   Create JIRA subtasks with predefined templates
+    *   Bidirectional linking between Azure DevOps and JIRA
+*   **Splunk Integration:**
+    *   Execute Splunk search queries using SPL (Search Processing Language)
+    *   Search through Splunk indexes for logs, metrics, and machine data
+    *   Configurable time ranges and result limits
 
 ## Prerequisites
 
@@ -52,22 +61,45 @@ npx mcp-azdo
 
 ## Configuration
 
-This tool requires the following environment variables to be set to authenticate and interact with Azure DevOps:
+This tool requires the following environment variables to be set to authenticate and interact with Azure DevOps, JIRA, and Splunk:
 
+### Required Variables
+
+**Azure DevOps:**
 *   `AZDO_ORG`: Your Azure DevOps organization name.
 *   `AZDO_PROJECT`: Your Azure DevOps project name.
 *   `AZDO_PAT`: Your Azure DevOps Personal Access Token. The PAT must have sufficient permissions (e.g., "Read & write" for Work Items and "Read & write" for Test Management).
+
+**JIRA:**
 *   `JIRA_PAT`: Your JIRA API key for authentication (Base64 encoded "email:api_token" string).
 *   `JIRA_API_BASE_URL`: Your JIRA instance base URL (e.g., "https://your-domain.atlassian.net").
+
+### Optional Variables
+
+**Splunk (optional):**
+*   `SPLUNK_URL`: Full Splunk URL (e.g., "https://your-splunk.com:8089") OR
+*   `SPLUNK_HOST`: Splunk hostname (e.g., "your-splunk.com")
+*   `SPLUNK_PORT`: Splunk API port (default: 8089)
+*   `SPLUNK_SCHEME`: Protocol to use (http or https)
+*   `SPLUNK_TOKEN`: Splunk authentication token
+*   `VERIFY_SSL`: Whether to verify SSL certificates (true or false)
 
 You can set these variables in your shell environment or by creating a `.env` file in the root of this project with the following format:
 
 ```env
+# Azure DevOps (Required)
 AZDO_ORG=YourOrganizationName
 AZDO_PROJECT=YourProjectName
 AZDO_PAT=YourPersonalAccessToken
+
+# JIRA (Required)
 JIRA_PAT=YourBase64EncodedJiraToken
 JIRA_API_BASE_URL=https://your-domain.atlassian.net
+
+# Splunk (Optional)
+SPLUNK_URL=https://your-splunk.com:8089
+SPLUNK_TOKEN=YourSplunkToken
+VERIFY_SSL=false
 ```
 
 When used as an MCP server, these environment variables can also be passed via the MCP host's configuration.
@@ -172,6 +204,19 @@ The following tools are exposed by this MCP server:
         *   `suiteId` (number): The ID of the parent Test Suite to get child suites from.
     *   Returns:
         *   A list of child test suites with their details including names and IDs.
+
+10. **`search_splunk`** (Optional - requires Splunk configuration)
+    *   Description: Execute a Splunk search query using SPL (Search Processing Language). Searches through Splunk indexes for logs, metrics, and machine data.
+    *   Parameters:
+        *   `search_query` (string): The Splunk SPL query to execute against Splunk data (e.g., "index=_internal | head 10").
+        *   `earliest_time` (string, optional): Start time for the Splunk search (e.g., "-24h", "-7d", "2024-01-01T00:00:00"). Default: "-24h".
+        *   `latest_time` (string, optional): End time for the Splunk search. Default: "now".
+        *   `max_results` (number, optional): Maximum number of Splunk events to return. Default: 100.
+    *   Returns:
+        *   JSON array of search results with matching events and fields.
+    *   Notes:
+        *   Requires Splunk environment variables to be configured (see Configuration section).
+        *   If Splunk is not configured, this tool will not be available.
 
 
 ## Development
