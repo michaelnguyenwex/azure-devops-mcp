@@ -40,11 +40,11 @@ Of course. Given your existing project structure and MCPs, here is a detailed br
     -   `[x]` In `commitAnalyzer.ts`, define a function `findSuspectedCommits(errorMessage: string, recentCommits: Commit[]): Commit[]`. This function should extract keywords from the error and filter the list of recent commits based on those keywords found in commit messages or changed file paths.
 
 5.  **Develop Jira Ticket Formatting and Creation Service**
-    -   `[ ]` In the `src/triage/` directory, create a file named `jiraFormatter.ts`.
-    -   `[ ]` In `src/triage/types.ts`, define a `TriageData` interface that encapsulates all data needed for a ticket (e.g., `errorSignature`, `errorCount`, `splunkLink`, `suspectedCommits`).
-    -   `[ ]` In `jiraFormatter.ts`, create an exported function `formatJiraTicket(data: TriageData): { summary: string, description: string }`. This function should generate the ticket title and a detailed, markdown-formatted description using the template provided previously.
-    -   `[ ]` In the `src/triage/` directory, create a file named `jiraService.ts`.
-    -   `[ ]` Create a class `JiraService` with an `async` method `createTriageTicket(summary: string, description: string): Promise<{ issueKey: string }>`. This method will call your existing Jira MCP's tool for creating issues.
+    -   `[x]` In the `src/triage/` directory, create a file named `jiraFormatter.ts`.
+    -   `[x]` In `src/triage/types.ts`, define a `TriageData` interface that encapsulates all data needed for a ticket (e.g., `errorSignature`, `errorCount`, `splunkLink`, `suspectedCommits`).
+    -   `[x]` In `jiraFormatter.ts`, create an exported function `formatJiraTicket(data: TriageData): { summary: string, description: string }`. This function should generate the ticket title and a detailed, markdown-formatted description using the template provided previously.
+    -   `[x]` In the `src/triage/` directory, create a file named `jiraService.ts`.
+    -   `[x]` Create a class `JiraService` with an `async` method `createTriageTicket(summary: string, description: string): Promise<{ issueKey: string }>`. This method will call your existing Jira MCP's tool for creating issues.
 
 6.  **Implement State Management to Prevent Duplicate Tickets**
     -   `[ ]` In the `src/triage/` directory, create a file named `stateManager.ts`.
