@@ -33,11 +33,11 @@ Of course. Given your existing project structure and MCPs, here is a detailed br
     -   `[x]` This method will be a wrapper that calls your existing MCP for deployment information. It should handle the request and response, returning the deployment info conforming to the `DeploymentInfo` interface.
 
 4.  **Implement the GitHub Analysis Service**
-    -   `[ ]` In `src/triage/types.ts`, define a `Commit` interface that models the data returned by your GitHub MCP (e.g., `hash`, `message`, `author`, `date`, `changedFiles`).
-    -   `[ ]` In the `src/triage/` directory, create a file named `githubService.ts`.
-    -   `[ ]` Create a class `GitHubService` with an `async` method `getCommitsSince(repoName: string, sinceDate: string): Promise<Commit[]>`. This method will call your existing GitHub MCP.
-    -   `[ ]` In the same file, create a new file named `commitAnalyzer.ts`.
-    -   `[ ]` In `commitAnalyzer.ts`, define a function `findSuspectedCommits(errorMessage: string, recentCommits: Commit[]): Commit[]`. This function should extract keywords from the error and filter the list of recent commits based on those keywords found in commit messages or changed file paths.
+    -   `[x]` In `src/triage/types.ts`, define a `Commit` interface that models the data returned by your GitHub MCP (e.g., `hash`, `message`, `author`, `date`, `changedFiles`).
+    -   `[x]` In the `src/triage/` directory, create a file named `githubService.ts`.
+    -   `[x]` Create a class `GitHubService` with an `async` method `getCommitsSince(repoName: string, sinceDate: string): Promise<Commit[]>`. This method will call your existing GitHub MCP.
+    -   `[x]` In the same file, create a new file named `commitAnalyzer.ts`.
+    -   `[x]` In `commitAnalyzer.ts`, define a function `findSuspectedCommits(errorMessage: string, recentCommits: Commit[]): Commit[]`. This function should extract keywords from the error and filter the list of recent commits based on those keywords found in commit messages or changed file paths.
 
 5.  **Develop Jira Ticket Formatting and Creation Service**
     -   `[ ]` In the `src/triage/` directory, create a file named `jiraFormatter.ts`.
