@@ -20,11 +20,11 @@ Of course. Given your existing project structure and MCPs, here is a detailed br
     -   `[x]` In `src/triage/types.ts`, define and export a `SplunkLogEvent` interface that accurately models the structure of a single error log object your function will receive.
 
 2.  **Implement Error Log Parsing and Signature Generation**
-    -   `[ ]` In the `src/triage/` directory, create a new file named `errorParser.ts`.
-    -   `[ ]` Import the `SplunkLogEvent` interface from `./types.ts`.
-    -   `[ ]` Create an exported function `generateErrorSignature(errorMessage: string): string`. This function should use regular expressions to strip unique, instance-specific data (e.g., UUIDs, timestamps, transaction IDs) from an error message to create a stable, generic signature.
-    -   `[ ]` Create another exported function `aggregateErrorsBySignature(logs: SplunkLogEvent[]): Map<string, SplunkLogEvent[]>`.
-    -   `[ ]` This function should iterate through the input `logs`, call `generateErrorSignature` on each, and group the original log events into a `Map` where the key is the generated signature.
+    -   `[x]` In the `src/triage/` directory, create a new file named `errorParser.ts`.
+    -   `[x]` Import the `SplunkLogEvent` interface from `./types.ts`.
+    -   `[x]` Create an exported function `generateErrorSignature(errorMessage: string): string`. This function should use regular expressions to strip unique, instance-specific data (e.g., UUIDs, timestamps, transaction IDs) from an error message to create a stable, generic signature.
+    -   `[x]` Create another exported function `aggregateErrorsBySignature(logs: SplunkLogEvent[]): Map<string, SplunkLogEvent[]>`.
+    -   `[x]` This function should iterate through the input `logs`, call `generateErrorSignature` on each, and group the original log events into a `Map` where the key is the generated signature.
 
 3.  **Define and Implement the Deployment Information Service**
     -   `[ ]` In `src/triage/types.ts`, define a `DeploymentInfo` interface that includes at least a `commitHash: string`.
