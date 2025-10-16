@@ -5,7 +5,9 @@
   "main": "build/index.js",
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test:triage": "npm run build && node build/triage/test-triage.js",
+    "test:triage-simple": "npm run build && node build/triage/test-simple.js"
   },
   "bin": {
     "azdo-mcp": "./build/index.js"

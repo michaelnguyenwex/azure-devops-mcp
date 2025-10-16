@@ -134,7 +134,7 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
         };
         
         // Step 2g: Create Jira ticket
-        if (false && triageConfig.createTickets) {
+        if (triageConfig.createTickets) {
           console.log('Creating Jira ticket...');
           
           try {
