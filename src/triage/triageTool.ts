@@ -41,17 +41,26 @@ export function triageSplunkErrorTool(server: McpServer) {
         validateTriageInput(logs as SplunkLogEvent[], triageConfig);
         
         console.log('✅ Input validation passed');
-        console.log('📊 Triage configuration:', {
-          repositoryName: triageConfig.repositoryName || 'default',
-          jiraProjectKey: triageConfig.jiraProjectKey || 'PROD',
+        // Set reasonable defaults at the tool level
+        const finalConfig = {
+          repositoryName: triageConfig.repositoryName || undefined, // No default - user should specify
+          jiraProjectKey: triageConfig.jiraProjectKey || undefined, // No default - user should specify  
           commitLookbackDays: triageConfig.commitLookbackDays || 7,
           createTickets: triageConfig.createTickets !== false,
-          dryRun: triageConfig.createTickets === false,
+          ...triageConfig
+        };
+
+        console.log('📊 Triage configuration:', {
+          repositoryName: finalConfig.repositoryName || 'not specified',
+          jiraProjectKey: finalConfig.jiraProjectKey || 'not specified',
+          commitLookbackDays: finalConfig.commitLookbackDays,
+          createTickets: finalConfig.createTickets,
+          dryRun: !finalConfig.createTickets,
           splunkAutoDetected: true // Splunk URL now auto-detected from existing config
         });
         
-        // Run the triage workflow
-        await runTriage(logs as SplunkLogEvent[], triageConfig);
+        // Run the triage workflow with final configuration
+        await runTriage(logs as SplunkLogEvent[], finalConfig);
         
         return {
           content: [{

@@ -48,13 +48,11 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
     const jiraService = new JiraService();
     const stateManager = new StateManager();
     
-    // Set default configuration values
+    // Apply user configuration (defaults should be handled at the tool level)
     const triageConfig = {
-      repositoryName: 'company/service-repo', // Default - should be configurable
-      jiraProjectKey: 'PROD',
-      commitLookbackDays: 7,
-      createTickets: true,
-      ...config
+      commitLookbackDays: 7, // This is a reasonable universal default
+      createTickets: true,   // This is a reasonable universal default
+      ...config // User config overrides defaults
     };
     
     console.log('Triage configuration:', triageConfig);
