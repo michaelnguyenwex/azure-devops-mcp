@@ -17,7 +17,7 @@ export function triageSplunkErrorTool(server: McpServer) {
     "triage_splunk_error",
     "Automatically analyze production errors and identify suspected root causes through GitHub commit analysis",
     {
-      errorMessages: z.array(z.string()).describe("Array of error messages to analyze for triage"),
+      errorMessages: z.string().describe("Error messages to analyze for triage"),
       repositoryName: z.string().describe("GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')"),
       commitLookbackDays: z.number().min(1).max(30).optional().describe("Number of days to look back for commits (1-30, default: 7)")
     },

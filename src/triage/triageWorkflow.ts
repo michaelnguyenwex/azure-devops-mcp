@@ -43,7 +43,6 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
   
   try {
     // Initialize all services
-    const deploymentService = new DeploymentService();
     const githubService = new GitHubService();
     const jiraService = new JiraService();
     const stateManager = new StateManager();
@@ -88,18 +87,8 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
           .sort((a, b) => a.getTime() - b.getTime())[0]
           .toISOString();
         
-        console.log(`Service: ${serviceName}, Environment: ${environment}, First seen: ${firstSeen}`);
-        
-        // Step 2c: Get deployment information
-        console.log('Fetching deployment information...');
-        let deploymentInfo;
-        try {
-          deploymentInfo = await deploymentService.getDeployedCommit(serviceName, environment, firstSeen);
-          console.log(`Found deployment: ${deploymentInfo.commitHash}`);
-        } catch (error) {
-          console.warn('Failed to get deployment information:', error);
-          // Continue without deployment info - we can still analyze commits
-        }
+        console.log(`Service: ${serviceName}, Environment: ${environment}, First seen: ${firstSeen}`);      
+
         
         // Step 2d: Get recent commits
         console.log('Fetching recent commits...');
@@ -129,8 +118,7 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
           firstSeen,
           suspectedCommits,
           serviceName,
-          environment,
-          deploymentInfo
+          environment,          
         };
         
         // Step 2g: Create Jira ticket
