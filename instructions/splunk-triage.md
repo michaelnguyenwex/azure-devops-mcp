@@ -67,8 +67,8 @@ Of course. Given your existing project structure and MCPs, here is a detailed br
     -   `[x]` Upon successful ticket creation, call `StateManager.markErrorAsProcessed()` with the error signature and the new Jira issue key.
 
 8.  **Integrate the Triage Workflow as a New MCP Tool**
-    -   `[ ]` Open the main server entry point at `src/index.ts`.
-    -   `[ ]` Import the `runTriage` function from `./triage/triageWorkflow.ts`.
-    -   `[ ]` In the section where MCP tools are registered, define a new tool. Give it a descriptive name, like `triage_splunk_error`.
-    -   `[ ]` The tool's implementation should call the `runTriage` function, passing along the necessary payload of Splunk logs.
-    -   `[ ]` Add JSDoc comments to the new tool definition explaining its purpose, inputs, and what it does, following the existing patterns in your `index.ts` file.
+    -   `[x]` Open the main server entry point at `src/index.ts`.
+    -   `[x]` Import the `runTriage` function from `./triage/triageWorkflow.ts`.
+    -   `[x]` In the section where MCP tools are registered, define a new tool. Give it a descriptive name, like `triage_splunk_error`.
+    -   `[x]` The tool's implementation should call the `runTriage` function, passing along the necessary payload of Splunk logs.
+    -   `[x]` Add JSDoc comments to the new tool definition explaining its purpose, inputs, and what it does, following the existing patterns in your `index.ts` file.
