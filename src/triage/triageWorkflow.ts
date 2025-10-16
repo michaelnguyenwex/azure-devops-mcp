@@ -6,6 +6,7 @@ import { findSuspectedCommits } from './commitAnalyzer.js';
 import { JiraService } from './jiraService.js';
 import { formatJiraTicket } from './jiraFormatter.js';
 import { StateManager } from './stateManager.js';
+import { SplunkUrlBuilder } from '../integrations/splunk/urlBuilder.js';
 
 /**
  * Configuration options for the triage workflow
@@ -128,7 +129,7 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
         const triageData: TriageData = {
           errorSignature: signature,
           errorCount: errorLogs.length,
-          splunkLink: buildSplunkLink(triageConfig.splunkBaseUrl!, signature, firstSeen),
+          splunkLink: SplunkUrlBuilder.buildSearchLink(signature, firstSeen, triageConfig.splunkBaseUrl),
           errorMessage: firstError.message,
           firstSeen,
           suspectedCommits,
@@ -191,31 +192,8 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
   }
 }
 
-/**
- * Builds a Splunk search link for investigating the error.
- * 
- * @param splunkBaseUrl - Base URL for Splunk instance
- * @param errorSignature - The error signature to search for
- * @param firstSeen - When the error was first seen (for time range)
- * @returns URL to Splunk search results
- */
-function buildSplunkLink(splunkBaseUrl: string, errorSignature: string, firstSeen: string): string {
-  try {
-    // Create a search that will find similar errors
-    // This is a simplified version - in practice you'd want more sophisticated search terms
-    const searchTerms = errorSignature.split(' ').slice(0, 3).join(' AND '); // First few keywords
-    const encodedSearch = encodeURIComponent(`search ${searchTerms}`);
-    
-    // Set time range to start from first seen error
-    const firstSeenDate = new Date(firstSeen);
-    const earliestTime = Math.floor(firstSeenDate.getTime() / 1000); // Unix timestamp
-    
-    return `${splunkBaseUrl}/en-US/app/search/search?q=${encodedSearch}&earliest=${earliestTime}&latest=now`;
-  } catch (error) {
-    console.warn('Failed to build Splunk link:', error);
-    return `${splunkBaseUrl}/en-US/app/search/search`;
-  }
-}
+// Note: Splunk URL building logic moved to src/integrations/splunk/urlBuilder.ts
+// This centralizes Splunk URL construction and leverages existing configuration
 
 /**
  * Validates the input logs and configuration before running triage.
