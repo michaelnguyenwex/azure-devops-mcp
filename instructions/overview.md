@@ -98,12 +98,12 @@ azure-devops-mcp/
 - **Optional integration**: Gracefully degrades if Splunk is not configured
 
 ### 5. **Automated Error Triage System (`triage/`)**
-- **Error Analysis**: Intelligent error signature generation and grouping
+- **Raw Splunk JSON Parsing**: Extracts structured error information from Splunk event data
+- **Stack Trace Analysis**: Intelligently parses .NET stack traces to identify key files, methods, and line numbers
+- **Search Keywords Generation**: Automatically extracts files, methods, and context clues for investigation
 - **GitHub Integration**: Real-time commit analysis to identify potential root causes
-- **Commit Scoring**: Relevance-based scoring system for suspected commits
-- **Jira Automation**: Comprehensive ticket creation with investigation context
-- **State Management**: Splunk-based duplicate prevention and processing history
-- **Multi-Service Support**: Handles errors across different services and environments
+- **Commit Scoring**: Relevance-based scoring system for suspected commits using smart matching algorithms
+- **Analysis-Only Tool**: Provides structured investigation insights without modifying systems or creating tickets
 
 ### 6. **Main Server (`index.ts`)**
 - **Unified item fetching**: Single `fetch-item` tool that intelligently routes to Azure DevOps (numeric IDs) or JIRA (string IDs)
@@ -154,7 +154,7 @@ The server exposes these tools to AI assistants:
 | `get-all-testcases-from-testsuite` | Retrieve test cases from a suite |
 | `get-child-test-suites` | Get hierarchical test suite structure |
 | `search_splunk` | Execute SPL queries to search Splunk logs and metrics (optional) |
-| `triage_splunk_error` | Automatically analyze production errors and create Jira triage tickets with GitHub commit analysis (requires GitHub token) |
+| `triage_splunk_error` | Parse raw Splunk JSON data and analyze GitHub commits to identify suspected root causes for production errors (analysis-only, requires GitHub token) |
 
 This architecture enables AI assistants to orchestrate complex test management workflows across multiple platforms while maintaining data consistency, providing rich cross-platform linking capabilities, and offering observability through integrated Splunk search.
 
@@ -208,16 +208,25 @@ All integrations are designed to be optional and fail gracefully, ensuring the c
 
 ### Error Triage Example
 ```typescript
-// Analyze production errors automatically
-const result = await mcp.call("triage_splunk_error", {
-  errorMessages: [
-    "Database connection timeout in OrderService.processOrder()",
-    "NullPointerException in UserService.validateSession()",
-    "API rate limit exceeded in PaymentService.charge()"
-  ],
-  repositoryName: "ecommerce/order-service",
-  commitLookbackDays: 5
+// Analyze raw Splunk JSON for investigation insights
+const rawSplunkData = JSON.stringify({
+  "Application": "WexHealth.CDH.Web.Consumer",
+  "Environment": "QA",
+  "_time": "2025-10-16T09:13:57.833-05:00",
+  "_raw": "{\"@t\":\"2025-10-16T14:13:57.8339402Z\",\"@mt\":\"[DocumentIndexService] Operation failed\",\"@x\":\"WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException: \\\"Object reference not set to an instance of an object.\\\"\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.Utils.HttpClientExtensions.<ReadAsJsonAsync>d__0`1.MoveNext()\\r\\n   at Lighthouse1.Platform.Storage.Providers.SdkApiClient.GetShareableUrl(String objectId, DateTimeOffset expiration) in E:\\\\build\\\\src\\\\SdkApiClient.cs:line 173\",\"SourceContext\":\"Lighthouse1.Platform.Storage.Providers.DocumentIndexProvider\"}"
 });
+
+const analysisResult = await mcp.call("triage_splunk_error", {
+  rawSplunkData: rawSplunkData,
+  repositoryName: "ecommerce/order-service",
+  commitLookbackDays: 7
+});
+
+// Returns structured analysis with:
+// • Parsed error details and stack trace
+// • Search keywords (files, methods, context)
+// • Suspected commits ranked by relevance
+// • Investigation starting points
 ```
 
 ### Integrated Workflow Example
@@ -237,14 +246,20 @@ async function createTestWithMonitoring() {
     earliest_time: "-24h"
   });
   
-  // 3. Auto-triage any new errors
+  // 3. Analyze specific error events for investigation insights
   if (errors.length > 0) {
-    const errorMessages = errors.map(e => e.message);
-    await mcp.call("triage_splunk_error", {
-      errorMessages: errorMessages,
-      repositoryName: "ecommerce/order-service",
+    // Use the first error event for triage analysis
+    const errorEvent = errors[0];
+    const rawSplunkData = JSON.stringify(errorEvent);
+    
+    const triageAnalysis = await mcp.call("triage_splunk_error", {
+      rawSplunkData: rawSplunkData,
+      repositoryName: "ecommerce/order-service", 
       commitLookbackDays: 7
     });
+    
+    // Analysis provides structured investigation starting points
+    // Use results to create detailed Jira tickets manually
   }
 }
 ```

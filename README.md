@@ -237,25 +237,34 @@ The following tools are exposed by this MCP server:
         *   If Splunk is not configured, this tool will not be available.
 
 11. **`triage_splunk_error`** (Optional - requires GitHub configuration)
-    *   Description: Parse raw Splunk JSON data and analyze GitHub commits to identify suspected root causes for production errors.
+    *   Description: Parse raw Splunk JSON data and analyze GitHub commits to identify suspected root causes for production errors. This is an analysis-only tool that provides structured insights for manual investigation.
     *   Parameters:
-        *   `rawSplunkData` (string): Raw Splunk JSON string containing error details, stack trace, and metadata
+        *   `rawSplunkData` (string): Raw Splunk JSON string containing error details and stack trace (must include Application, Environment, _time, and _raw fields)
         *   `repositoryName` (string): GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')
         *   `commitLookbackDays` (number, optional): Number of days to look back for commits (1-30, default: 7)
     *   Returns:
-        *   Success message with summary of triage analysis results
+        *   Structured analysis report with error details, stack trace analysis, and suspected commits
     *   Features:
-        *   **Splunk Data Parsing**: Extracts structured error information from raw Splunk JSON
-        *   **Stack Trace Analysis**: Parses .NET stack traces to identify key files and methods
-        *   **GitHub Integration**: Analyzes recent commits for potential root causes
-        *   **Smart Commit Analysis**: Uses extracted keywords from stack traces and error details
-        *   **Investigation Insights**: Provides detailed analysis with file/method context
+        *   **Raw Splunk JSON Parsing**: Extracts structured error information from Splunk event data
+        *   **Stack Trace Analysis**: Intelligently parses .NET stack traces to identify key files, methods, and line numbers
+        *   **Search Keywords Generation**: Automatically extracts files, methods, and context clues for investigation
+        *   **GitHub Commit Analysis**: Fetches and analyzes recent commits using extracted keywords
+        *   **Commit Relevance Scoring**: Ranks commits by relevance to the error using smart matching algorithms
+        *   **Investigation Starting Points**: Provides clear, actionable investigation focus areas
+    *   Analysis Output Includes:
+        *   Service name, environment, and timestamp
+        *   Exception type and error message
+        *   Parsed stack trace with key files and methods
+        *   Search keywords categorized by files, methods, and context
+        *   Ranked list of suspected commits with authors and dates
+        *   Structured investigation recommendations
     *   Notes:
-        *   Analysis-only tool - does not create tickets automatically
-        *   Requires GitHub token for commit analysis (GITHUB_TOKEN or GITHUB_PAT)
-        *   Input must be raw Splunk JSON with _raw field containing error details
-        *   Extracts stack traces, exception types, and service context automatically
-        *   Results provide structured analysis for manual investigation
+        *   **Analysis-only tool** - does not create tickets or modify any systems
+        *   Requires GitHub token for commit analysis (GITHUB_TOKEN or GITHUB_PAT environment variable)
+        *   Input must be complete raw Splunk JSON with nested _raw field containing error details
+        *   Designed specifically for .NET applications but extensible to other stack traces
+        *   Gracefully handles missing GitHub configuration by skipping commit analysis
+        *   Results provide comprehensive starting points for manual error investigation and can inform Jira ticket creation
 
 
 ## Example Usage
@@ -322,21 +331,29 @@ const rawSplunkData = JSON.stringify({
     "Application": "WexHealth.CDH.Web.Consumer",
     "Environment": "QA", 
     "_time": "2025-10-16T09:13:57.833-05:00",
-    "_raw": "{\"@t\":\"2025-10-16T14:13:57.8339402Z\",\"@mt\":\"[DocumentIndexService] Operation failed\",\"@x\":\"WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException: \\\"Object reference not set to an instance of an object.\\\"\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.Utils.HttpClientExtensions.<ReadAsJsonAsync>d__0`1.MoveNext()\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.ApiClient.<GetJsonAsync>d__5`1.MoveNext()\\r\\n   at Lighthouse1.Platform.Storage.Providers.SdkApiClient.GetShareableUrl(String objectId, DateTimeOffset expiration) in E:\\\\build\\\\src\\\\SdkApiClient.cs:line 173\",\"SourceContext\":\"Lighthouse1.Platform.Storage.Providers.DocumentIndexProvider\"}"
+    "_raw": "{\"@t\":\"2025-10-16T14:13:57.8339402Z\",\"@mt\":\"[DocumentIndexService] Operation 'Get Shareable Url' failed!\",\"@x\":\"WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException: \\\"Object reference not set to an instance of an object.\\\"\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.Utils.HttpClientExtensions.<ReadAsJsonAsync>d__0`1.MoveNext()\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.ApiClient.<GetJsonAsync>d__5`1.MoveNext()\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApi.<GetShareableUrlAsync>d__35.MoveNext()\\r\\n   at Lighthouse1.Platform.Storage.Providers.SdkApiClient.GetShareableUrl(String objectId, DateTimeOffset expiration) in E:\\\\build\\\\src\\\\SdkApiClient.cs:line 173\\r\\n   at Lighthouse1.Platform.Storage.Providers.DocumentIndexProvider.GetShareableUrl(String objectId, DateTimeOffset expiration) in E:\\\\build\\\\src\\\\DocumentIndexProvider.cs:line 299\",\"SourceContext\":\"Lighthouse1.Platform.Storage.Providers.DocumentIndexProvider\"}"
 });
 
-await mcp.call("triage_splunk_error", {
+// Complete error analysis with GitHub commit investigation
+const analysisResult = await mcp.call("triage_splunk_error", {
     rawSplunkData: rawSplunkData,
-    repositoryName: "mycompany/document-service",
+    repositoryName: "wexhealth/document-service",
     commitLookbackDays: 7
 });
 
-// Quick analysis with shorter lookback
-await mcp.call("triage_splunk_error", {
+// Quick analysis with shorter lookback for recent changes
+const quickAnalysis = await mcp.call("triage_splunk_error", {
     rawSplunkData: rawSplunkData,
-    repositoryName: "mycompany/document-service", 
+    repositoryName: "wexhealth/document-service", 
     commitLookbackDays: 3
 });
+
+// Analysis output provides structured investigation starting points:
+// • Service: WexHealth.CDH.Web.Consumer (QA)
+// • Exception: DocumentIndexApiException
+// • Key files: SdkApiClient.cs, DocumentIndexProvider.cs, etc.
+// • Key methods: GetShareableUrl, ReadAsJsonAsync, etc.
+// • Suspected commits: Recent changes ranked by relevance
 ```
 
 ### Multi-Platform Workflow Example
