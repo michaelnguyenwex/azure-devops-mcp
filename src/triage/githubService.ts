@@ -1,10 +1,37 @@
 import { Commit } from './types.js';
+import axios from 'axios';
 
 /**
  * Service for retrieving GitHub commit information.
- * This class acts as a wrapper around existing MCP tools for GitHub data.
+ * This class integrates directly with the GitHub REST API.
  */
 export class GitHubService {
+  private readonly githubToken: string;
+  private readonly baseUrl = 'https://api.github.com';
+
+  constructor() {
+    this.githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT || '';
+    
+    if (!this.githubToken) {
+      console.warn('⚠️  GitHub token not found. Set GITHUB_TOKEN or GITHUB_PAT environment variable for GitHub integration.');
+    }
+  }
+
+  /**
+   * Gets the authorization headers for GitHub API requests.
+   */
+  private getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'MCP-AZDO-Triage-Service/1.0.0'
+    };
+
+    if (this.githubToken) {
+      headers['Authorization'] = `Bearer ${this.githubToken}`;
+    }
+
+    return headers;
+  }
   /**
    * Retrieves commits from a repository since a specific date.
    * This helps identify recent changes that might be related to errors.
@@ -15,41 +42,108 @@ export class GitHubService {
    */
   async getCommitsSince(repoName: string, sinceDate: string): Promise<Commit[]> {
     try {
-      // TODO: This should call the existing GitHub MCP tool
-      // The actual implementation will depend on the available GitHub integration
-      // This might involve calling GitHub API through existing MCP tools
-      
+      if (!this.githubToken) {
+        console.warn(`⚠️  No GitHub token configured. Returning empty commits list for ${repoName}`);
+        return [];
+      }
+
       console.log(`Fetching commits for repository: ${repoName} since: ${sinceDate}`);
       
-      // This is a placeholder - replace with actual MCP tool call
-      // Example of what the actual implementation might look like:
-      // const response = await this.callMCPTool('get_github_commits', { repoName, since: sinceDate });
-      // return response.commits.map(commit => this.transformCommitData(commit));
-      
-      // Placeholder implementation - should be replaced with actual GitHub MCP calls
-      const mockCommits: Commit[] = [
-        {
-          hash: 'abc123def456',
-          message: 'Fix null pointer exception in user service',
-          author: 'john.doe@company.com',
-          date: sinceDate,
-          changedFiles: ['src/services/userService.ts', 'tests/userService.test.ts'],
-          pullRequestUrl: 'https://github.com/company/repo/pull/123'
-        },
-        {
-          hash: 'def456ghi789',
-          message: 'Update database connection settings',
-          author: 'jane.smith@company.com',
-          date: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          changedFiles: ['config/database.ts', 'src/db/connection.ts'],
-          pullRequestUrl: 'https://github.com/company/repo/pull/124'
-        }
-      ];
+      // GitHub API endpoint for commits
+      const url = `${this.baseUrl}/repos/${repoName}/commits`;
+      const params = {
+        since: sinceDate,
+        per_page: 100 // Limit to avoid too many results
+      };
 
-      return mockCommits;
+      const response = await axios.get(url, {
+        headers: this.getAuthHeaders(),
+        params
+      });
+
+      console.log(`✅ Retrieved ${response.data.length} commits from GitHub`);
+
+      // Transform GitHub API response to our Commit interface
+      const commits: Commit[] = await Promise.all(
+        response.data.map(async (githubCommit: any) => {
+          // Get changed files for each commit (requires separate API call)
+          const changedFiles = await this.getCommitChangedFiles(repoName, githubCommit.sha);
+          
+          // Try to find associated pull request
+          const pullRequestUrl = await this.findPullRequestForCommit(repoName, githubCommit.sha);
+
+          return {
+            hash: githubCommit.sha,
+            message: githubCommit.commit.message,
+            author: githubCommit.commit.author.email || githubCommit.author?.login || 'unknown',
+            date: githubCommit.commit.author.date,
+            changedFiles: changedFiles,
+            pullRequestUrl: pullRequestUrl
+          };
+        })
+      );
+
+      return commits;
     } catch (error) {
       console.error(`Failed to retrieve commits for ${repoName}:`, error);
-      throw new Error(`Unable to fetch GitHub commits: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // If it's a 404, the repo might not exist or we don't have access
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        console.warn(`Repository ${repoName} not found or not accessible. Check repository name and GitHub token permissions.`);
+        return [];
+      }
+      
+      // If it's a 403, we might have hit rate limits or don't have permission
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        console.warn(`GitHub API access forbidden for ${repoName}. Check GitHub token permissions or rate limits.`);
+        return [];
+      }
+
+      // For other errors, still return empty array but log the issue
+      console.warn(`GitHub API error for ${repoName}, continuing without commit data:`, error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
+  }
+
+  /**
+   * Gets the files changed in a specific commit.
+   */
+  private async getCommitChangedFiles(repoName: string, commitSha: string): Promise<string[]> {
+    try {
+      const url = `${this.baseUrl}/repos/${repoName}/commits/${commitSha}`;
+      
+      const response = await axios.get(url, {
+        headers: this.getAuthHeaders()
+      });
+
+      return response.data.files?.map((file: any) => file.filename) || [];
+    } catch (error) {
+      console.warn(`Failed to get changed files for commit ${commitSha}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Attempts to find the pull request associated with a commit.
+   */
+  private async findPullRequestForCommit(repoName: string, commitSha: string): Promise<string | undefined> {
+    try {
+      // Search for pull requests that contain this commit
+      const url = `${this.baseUrl}/repos/${repoName}/commits/${commitSha}/pulls`;
+      
+      const response = await axios.get(url, {
+        headers: this.getAuthHeaders()
+      });
+
+      // Return the first (most relevant) pull request URL
+      if (response.data && response.data.length > 0) {
+        return response.data[0].html_url;
+      }
+
+      return undefined;
+    } catch (error) {
+      // This is not critical, so just return undefined if it fails
+      return undefined;
     }
   }
 
@@ -63,17 +157,29 @@ export class GitHubService {
    */
   async getCommitDetails(repoName: string, commitHash: string): Promise<Commit | null> {
     try {
+      if (!this.githubToken) {
+        console.warn(`⚠️  No GitHub token configured. Cannot fetch commit details for ${commitHash}`);
+        return null;
+      }
+
       console.log(`Fetching commit details for: ${commitHash} in ${repoName}`);
       
-      // TODO: Implement actual GitHub MCP tool call
-      // Placeholder implementation
+      const url = `${this.baseUrl}/repos/${repoName}/commits/${commitHash}`;
+      
+      const response = await axios.get(url, {
+        headers: this.getAuthHeaders()
+      });
+
+      const githubCommit = response.data;
+      const pullRequestUrl = await this.findPullRequestForCommit(repoName, commitHash);
+
       return {
-        hash: commitHash,
-        message: 'Detailed commit message',
-        author: 'developer@company.com',
-        date: new Date().toISOString(),
-        changedFiles: ['src/example.ts'],
-        pullRequestUrl: `https://github.com/${repoName}/pull/123`
+        hash: githubCommit.sha,
+        message: githubCommit.commit.message,
+        author: githubCommit.commit.author.email || githubCommit.author?.login || 'unknown',
+        date: githubCommit.commit.author.date,
+        changedFiles: githubCommit.files?.map((file: any) => file.filename) || [],
+        pullRequestUrl: pullRequestUrl
       };
     } catch (error) {
       console.error(`Failed to retrieve commit details for ${commitHash}:`, error);

@@ -133,6 +133,7 @@ The server exposes these tools to AI assistants:
 | `get-all-testcases-from-testsuite` | Retrieve test cases from a suite |
 | `get-child-test-suites` | Get hierarchical test suite structure |
 | `search_splunk` | Execute SPL queries to search Splunk logs and metrics (optional) |
+| `triage_splunk_error` | Automatically analyze production errors and create Jira triage tickets with GitHub commit analysis (requires GitHub token) |
 
 This architecture enables AI assistants to orchestrate complex test management workflows across multiple platforms while maintaining data consistency, providing rich cross-platform linking capabilities, and offering observability through integrated Splunk search.
 

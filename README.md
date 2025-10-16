@@ -21,6 +21,10 @@
     *   Execute Splunk search queries using SPL (Search Processing Language)
     *   Search through Splunk indexes for logs, metrics, and machine data
     *   Configurable time ranges and result limits
+*   **GitHub Integration:**
+    *   Automated error triage with GitHub commit analysis
+    *   Retrieve recent commits to identify potential root causes
+    *   Link Jira tickets to related GitHub pull requests and commits
 
 ## Prerequisites
 
@@ -61,7 +65,7 @@ npx mcp-azdo
 
 ## Configuration
 
-This tool requires the following environment variables to be set to authenticate and interact with Azure DevOps, JIRA, and Splunk:
+This tool requires the following environment variables to be set to authenticate and interact with Azure DevOps, JIRA, Splunk, and GitHub:
 
 ### Required Variables
 
@@ -84,6 +88,11 @@ This tool requires the following environment variables to be set to authenticate
 *   `SPLUNK_TOKEN`: Splunk authentication token
 *   `VERIFY_SSL`: Whether to verify SSL certificates (true or false)
 
+**GitHub (optional - required for error triage features):**
+*   `GITHUB_TOKEN` or `GITHUB_PAT`: GitHub Personal Access Token for API access
+    - Required permissions: `repo` (for private repos) or `public_repo` (for public repos)
+    - Used for automated error triage to fetch commit history and analyze potential root causes
+
 You can set these variables in your shell environment or by creating a `.env` file in the root of this project with the following format:
 
 ```env
@@ -98,6 +107,9 @@ JIRA_API_BASE_URL=https://your-domain.atlassian.net
 
 # Splunk (Optional)
 SPLUNK_URL=https://your-splunk.com:8089
+
+# GitHub (Optional - for error triage features)  
+GITHUB_TOKEN=your_github_personal_access_token
 SPLUNK_TOKEN=YourSplunkToken
 VERIFY_SSL=false
 ```
