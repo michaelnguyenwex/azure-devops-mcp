@@ -27,10 +27,10 @@ Of course. Given your existing project structure and MCPs, here is a detailed br
     -   `[x]` This function should iterate through the input `logs`, call `generateErrorSignature` on each, and group the original log events into a `Map` where the key is the generated signature.
 
 3.  **Define and Implement the Deployment Information Service**
-    -   `[ ]` In `src/triage/types.ts`, define a `DeploymentInfo` interface that includes at least a `commitHash: string`.
-    -   `[ ]` In the `src/triage/` directory, create a file named `deploymentService.ts`.
-    -   `[ ]` Create a class `DeploymentService` with an `async` method `getDeployedCommit(serviceName: string, environment: string, timestamp: string): Promise<DeploymentInfo>`.
-    -   `[ ]` This method will be a wrapper that calls your existing MCP for deployment information. It should handle the request and response, returning the deployment info conforming to the `DeploymentInfo` interface.
+    -   `[x]` In `src/triage/types.ts`, define a `DeploymentInfo` interface that includes at least a `commitHash: string`.
+    -   `[x]` In the `src/triage/` directory, create a file named `deploymentService.ts`.
+    -   `[x]` Create a class `DeploymentService` with an `async` method `getDeployedCommit(serviceName: string, environment: string, timestamp: string): Promise<DeploymentInfo>`.
+    -   `[x]` This method will be a wrapper that calls your existing MCP for deployment information. It should handle the request and response, returning the deployment info conforming to the `DeploymentInfo` interface.
 
 4.  **Implement the GitHub Analysis Service**
     -   `[ ]` In `src/triage/types.ts`, define a `Commit` interface that models the data returned by your GitHub MCP (e.g., `hash`, `message`, `author`, `date`, `changedFiles`).
