@@ -18,7 +18,7 @@ export function searchSplunkTool(server: McpServer) {
       const results = await client.search.execute(search_query, {
         earliestTime: earliest_time || '-24h',
         latestTime: latest_time || 'now',
-        maxResults: max_results || 100
+        maxResults: max_results || 20
       });
       
       return {
