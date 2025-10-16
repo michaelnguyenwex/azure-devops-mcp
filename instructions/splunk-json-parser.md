@@ -14,15 +14,15 @@ Here is a very detailed, numbered list of 1-point stories to implement the raw S
     -   `[x]` Inside the function, add a `try...catch` block to handle potential parsing errors gracefully.
 
 3.  **Implement Initial Raw String Parsing**
-    -   `[ ]` Inside the `try` block of `parseRawSplunkEvent`, call `JSON.parse()` on the `rawEvent._raw` property.
-    -   `[ ]` Cast the result of the parse operation to the `ParsedRawData` interface you defined earlier.
-    -   `[ ]` If `JSON.parse()` fails, throw a new `Error` with a descriptive message like "Failed to parse the _raw JSON string."
+    -   `[x]` Inside the `try` block of `parseRawSplunkEvent`, call `JSON.parse()` on the `rawEvent._raw` property.
+    -   `[x]` Cast the result of the parse operation to the `ParsedRawData` interface you defined earlier.
+    -   `[x]` If `JSON.parse()` fails, throw a new `Error` with a descriptive message like "Failed to parse the _raw JSON string."
 
 4.  **Implement Top-Level and Basic Field Extraction**
-    -   `[ ]` Create a new `TriageInput` object that will be built up and returned.
-    -   `[ ]` Map the `serviceName` property of the new object from `rawEvent.Application`.
-    -   `[ ]` Map the `environment` property from `rawEvent.Environment`.
-    -   `[ ]` Map the `timestamp` property from `rawEvent._time`. Ensure the value is converted to a standard ISO 8601 UTC format by creating a new `Date` object and calling `.toISOString()`.
+    -   `[x]` Create a new `TriageInput` object that will be built up and returned.
+    -   `[x]` Map the `serviceName` property of the new object from `rawEvent.Application`.
+    -   `[x]` Map the `environment` property from `rawEvent.Environment`.
+    -   `[x]` Map the `timestamp` property from `rawEvent._time`. Ensure the value is converted to a standard ISO 8601 UTC format by creating a new `Date` object and calling `.toISOString()`.
 
 5.  **Implement Core Error and Exception Parsing**
     -   `[ ]` Access the exception string from the parsed raw data object's `@x` property.

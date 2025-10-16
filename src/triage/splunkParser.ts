@@ -11,8 +11,26 @@ export async function parseRawSplunkEvent(rawEvent: RawSplunkEvent): Promise<Tri
     // Parse the _raw JSON string
     const parsedRawData: ParsedRawData = JSON.parse(rawEvent._raw);
     
-    // TODO: Implement rest of parsing logic
-    throw new Error('Parsing logic not fully implemented yet');
+    // Create the TriageInput object with basic field mappings
+    const triageInput: TriageInput = {
+      serviceName: rawEvent.Application,
+      environment: rawEvent.Environment,
+      timestamp: new Date(rawEvent._time).toISOString(),
+      errorMessage: '', // Will be populated later
+      exceptionType: '', // Will be populated later
+      stackTrace: [], // Will be populated later
+      searchKeywords: {
+        files: [],
+        methods: [],
+        context: []
+      }
+    };
+    
+    // TODO: Implement error message and exception parsing
+    // TODO: Implement stack trace parsing
+    // TODO: Implement search keywords aggregation
+    
+    return triageInput;
     
   } catch (error) {
     if (error instanceof SyntaxError) {
