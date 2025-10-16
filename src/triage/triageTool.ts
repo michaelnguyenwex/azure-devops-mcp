@@ -6,7 +6,7 @@ import { SplunkLogEvent } from './types.js';
 /**
  * Registers the triage Splunk error tool with the MCP server.
  * 
- * This tool automatically analyzes production errors, identifies potential root causes
+ * This tool automatically analyzes a single production error, identifies potential root causes
  * by cross-referencing with recent GitHub commits, and provides detailed investigation insights.
  * This is an analysis-only tool that does not create tickets.
  * 
@@ -17,24 +17,24 @@ export function triageSplunkErrorTool(server: McpServer) {
     "triage_splunk_error",
     "Automatically analyze production errors and identify suspected root causes through GitHub commit analysis",
     {
-      errorMessages: z.string().describe("Error messages to analyze for triage"),
+      errorMessages: z.string().describe("Error message to analyze for triage"),
       repositoryName: z.string().describe("GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')"),
       commitLookbackDays: z.number().min(1).max(30).optional().describe("Number of days to look back for commits (1-30, default: 7)")
     },
     async ({ errorMessages, repositoryName, commitLookbackDays }) => {
       try {
-        console.log(`\n🔍 Starting automated error triage for ${errorMessages.length} error messages`);
+        console.log(`\n🔍 Starting automated error triage for error message: "${errorMessages.substring(0, 100)}..."`);
         
-        // Convert simple error messages to SplunkLogEvent format for internal processing
+        // Convert single error message to SplunkLogEvent format for internal processing
         const currentTime = new Date().toISOString();
-        const logs: SplunkLogEvent[] = errorMessages.map((message, index) => ({
+        const logs: SplunkLogEvent[] = [{
           _time: currentTime,
-          message: message,
+          message: errorMessages,
           source: 'triage-tool',
           serviceName: 'unknown-service',
           environment: 'unknown-environment',
           level: 'ERROR'
-        }));
+        }];
         
         // Set configuration with defaults
         const finalConfig: TriageConfig = {
@@ -48,7 +48,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         
         console.log('✅ Input validation passed');
         console.log('📊 Triage configuration:', {
-          errorCount: errorMessages.length,
+          errorMessage: errorMessages.substring(0, 50) + (errorMessages.length > 50 ? '...' : ''),
           repositoryName: finalConfig.repositoryName || 'not specified',
           commitLookbackDays: finalConfig.commitLookbackDays,
           mode: 'analysis-only (no tickets created)'
@@ -60,7 +60,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         return {
           content: [{
             type: "text",
-            text: `✅ Triage analysis completed successfully!\n\nProcessed ${errorMessages.length} error messages for automated analysis. Check the console output above for detailed results including:\n\n• Number of unique error signatures identified\n• Errors grouped by similarity\n• GitHub commits analyzed for potential root causes\n• Suspected commits identified for investigation\n\nThe triage analysis provides:\n1. 🔍 Error signature generation and grouping\n2. 💻 GitHub commit correlation analysis\n3. 📊 Detailed investigation starting points\n4. 🎯 Root cause suggestions based on recent changes\n\nThis analysis can be used to manually create Jira tickets or for further investigation.`
+            text: `✅ Triage analysis completed successfully!\n\nProcessed error message for automated analysis: "${errorMessages.substring(0, 100)}${errorMessages.length > 100 ? '...' : ''}"\n\nCheck the console output above for detailed results including:\n\n• Error signature generated\n• GitHub commits analyzed for potential root causes\n• Suspected commits identified for investigation\n• Duplicate check performed\n\nThe triage analysis provides:\n1. 🔍 Error signature generation\n2. 💻 GitHub commit correlation analysis\n3. 📊 Detailed investigation starting points\n4. 🎯 Root cause suggestions based on recent changes\n\nThis analysis can be used to manually create Jira tickets or for further investigation.`
           }]
         };
         

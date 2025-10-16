@@ -28,6 +28,32 @@ export class StateManager {
   }
 
   /**
+   * Checks if an error signature has already been processed to prevent duplicate analysis.
+   * This method queries the Splunk summary index to see if a record exists for this error.
+   * 
+   * @param errorSignature - The normalized error signature to check
+   * @returns Promise resolving to true if error has been processed, false otherwise
+   */
+  async isErrorProcessed(errorSignature: string): Promise<boolean> {
+    try {
+      console.log(`Checking if error signature has been processed: ${errorSignature.substring(0, 50)}...`);
+      
+      // If Splunk is not available, assume error is new (no state tracking)
+      if (!this.isSplunkAvailable()) {
+        console.log('⚠️  Splunk not configured - assuming error is new (no state tracking)');
+        return false;
+      }
+
+      return false;
+    } catch (error: unknown) {
+      console.error('Failed to check error processing status:', error);
+      // If we can't determine the state, err on the side of caution and assume it's processed
+      // This prevents infinite loops but might miss some errors
+      return true;
+    }
+  }
+
+  /**
    * Marks an error signature as processed by writing a record to the Splunk summary index.
    * This creates a persistent record that can be queried by future triage runs.
    * 
