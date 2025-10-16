@@ -1,4 +1,4 @@
-import { SplunkLogEvent, TriageData, Commit } from './types.js';
+import { SplunkLogEvent, TriageData, Commit, RawSplunkEvent, TriageInput } from './types.js';
 import { aggregateErrorsBySignature } from './errorParser.js';
 import { DeploymentService } from './deploymentService.js';
 import { GitHubService } from './githubService.js';
@@ -7,6 +7,7 @@ import { JiraService } from './jiraService.js';
 import { formatJiraTicket } from './jiraFormatter.js';
 import { StateManager } from './stateManager.js';
 import { SplunkUrlBuilder } from '../integrations/splunk/urlBuilder.js';
+import { parseRawSplunkEvent } from './splunkParser.js';
 
 /**
  * Configuration options for the triage workflow
@@ -177,6 +178,34 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
 
 // Note: Splunk URL building logic moved to src/integrations/splunk/urlBuilder.ts
 // This centralizes Splunk URL construction and leverages existing configuration
+
+/**
+ * Triage workflow function for processing a single raw Splunk event.
+ * 
+ * @param rawEvent - The raw Splunk event to parse and process
+ * @param config - Optional configuration for the triage process  
+ */
+export async function runTriageFromRawEvent(rawEvent: RawSplunkEvent, config: TriageConfig = {}): Promise<TriageInput> {
+  console.log('Starting triage analysis for raw Splunk event');
+  
+  try {
+    // Step 1: Parse the raw event into a structured TriageInput
+    const triageInput = await parseRawSplunkEvent(rawEvent);
+    
+    console.log('Successfully parsed raw Splunk event:', {
+      serviceName: triageInput.serviceName,
+      environment: triageInput.environment,
+      exceptionType: triageInput.exceptionType,
+      stackFrameCount: triageInput.stackTrace.length
+    });
+    
+    return triageInput;
+    
+  } catch (error) {
+    console.error('Failed to process raw Splunk event:', error);
+    throw new Error(`Raw event triage failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
 
 /**
  * Validates the input logs and configuration before running triage.

@@ -46,11 +46,11 @@ Here is a very detailed, numbered list of 1-point stories to implement the raw S
     -   `[x]` Populate the `searchKeywords.context` array with the `exceptionType` and any other relevant context strings you can reliably extract from the parsed raw data (e.g., `SourceContext`).
 
 8.  **Finalize and Integrate the Parser Function**
-    -   `[ ]` At the end of the `parseRawSplunkEvent` function, return the fully constructed `TriageInput` object.
-    -   `[ ]` Open the main workflow file `src/triage/triageWorkflow.ts`.
-    -   `[ ]` Import the `parseRawSplunkEvent` function.
-    -   `[ ]` Update the main `runTriage` function signature to accept a `RawSplunkEvent` as its input instead of a `TriageInput`.
-    -   `[ ]` As the first step inside `runTriage`, call `await parseRawSplunkEvent(rawEvent)` and use the returned structured object for the rest of the workflow.
+    -   `[x]` At the end of the `parseRawSplunkEvent` function, return the fully constructed `TriageInput` object.
+    -   `[x]` Open the main workflow file `src/triage/triageWorkflow.ts`.
+    -   `[x]` Import the `parseRawSplunkEvent` function.
+    -   `[x]` Update the main `runTriage` function signature to accept a `RawSplunkEvent` as its input instead of a `TriageInput`.
+    -   `[x]` As the first step inside `runTriage`, call `await parseRawSplunkEvent(rawEvent)` and use the returned structured object for the rest of the workflow.
 9.  **Create test script**
     -   `[ ]` Create a test script using sample data from `C:\Users\W514918\source\repos\azure-devops-mcp\instructions\splunk-test-data.json` to validate if the output is matched with the sample output JSON.
 
