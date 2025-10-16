@@ -53,18 +53,18 @@ Of course. Given your existing project structure and MCPs, here is a detailed br
     -   `[x]` Create an `async` method `markErrorAsProcessed(errorSignature: string, jiraTicketKey: string): Promise<void>`. This method will write a new event to the Splunk summary index (using a Splunk HEC endpoint or another MCP tool) to log that the signature has been processed.
 
 7.  **Orchestrate the Main Triage Workflow**
-    -   `[ ]` Open the main workflow file at `src/triage/triageWorkflow.ts`.
-    -   `[ ]` Create and export the main function: `async function runTriage(logs: SplunkLogEvent[]): Promise<void>`.
-    -   `[ ]` Inside `runTriage`, instantiate the services you created: `DeploymentService`, `GitHubService`, `JiraService`, and `StateManager`.
-    -   `[ ]` Call `aggregateErrorsBySignature` from `errorParser.ts` to group the incoming logs.
-    -   `[ ]` Loop over each unique error signature from the aggregated map.
-    -   `[ ]` In the loop, first use `StateManager.isErrorProcessed()` to check if the error has already been handled. If `true`, log a message and `continue`.
-    -   `[ ]` If not processed, proceed to call the `DeploymentService` to get the deployed commit hash.
-    -   `[ ]` Call the `GitHubService` to get recent commits, then `findSuspectedCommits` to filter them.
-    -   `[ ]` Gather all necessary data into a `TriageData` object.
-    -   `[ ]` Call `formatJiraTicket` to generate the ticket content.
-    -   `[ ]` Call `JiraService.createTriageTicket()` to create the issue in Jira.
-    -   `[ ]` Upon successful ticket creation, call `StateManager.markErrorAsProcessed()` with the error signature and the new Jira issue key.
+    -   `[x]` Open the main workflow file at `src/triage/triageWorkflow.ts`.
+    -   `[x]` Create and export the main function: `async function runTriage(logs: SplunkLogEvent[]): Promise<void>`.
+    -   `[x]` Inside `runTriage`, instantiate the services you created: `DeploymentService`, `GitHubService`, `JiraService`, and `StateManager`.
+    -   `[x]` Call `aggregateErrorsBySignature` from `errorParser.ts` to group the incoming logs.
+    -   `[x]` Loop over each unique error signature from the aggregated map.
+    -   `[x]` In the loop, first use `StateManager.isErrorProcessed()` to check if the error has already been handled. If `true`, log a message and `continue`.
+    -   `[x]` If not processed, proceed to call the `DeploymentService` to get the deployed commit hash.
+    -   `[x]` Call the `GitHubService` to get recent commits, then `findSuspectedCommits` to filter them.
+    -   `[x]` Gather all necessary data into a `TriageData` object.
+    -   `[x]` Call `formatJiraTicket` to generate the ticket content.
+    -   `[x]` Call `JiraService.createTriageTicket()` to create the issue in Jira.
+    -   `[x]` Upon successful ticket creation, call `StateManager.markErrorAsProcessed()` with the error signature and the new Jira issue key.
 
 8.  **Integrate the Triage Workflow as a New MCP Tool**
     -   `[ ]` Open the main server entry point at `src/index.ts`.
