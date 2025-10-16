@@ -160,7 +160,14 @@ async function main() {
 }
 
 // Run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Check if this module is the main module being executed
+const isMainModule = process.argv[1] && (
+  process.argv[1].endsWith('test-splunk-triage.js') || 
+  process.argv[1].endsWith('test-splunk-triage.ts') ||
+  import.meta.url === `file://${process.argv[1]}`
+);
+
+if (isMainModule) {
   main().catch(error => {
     console.error('💥 Unhandled error in test suite:', error);
     process.exit(1);

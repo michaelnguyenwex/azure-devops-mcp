@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Test script for the runTriage function using real Splunk test data
+ * Test script for the triageSplunkErrorTool function using real Splunk test data
  * 
  * This script:
  * 1. Loads test data from splunk-test-data.json
- * 2. Transforms it to the expected SplunkLogEvent format
- * 3. Tests the runTriage function with various configurations
+ * 2. Tests the core logic of triageSplunkErrorTool
+ * 3. Validates parsing, commit analysis, and result formatting
  * 4. Provides detailed output for debugging and validation
  */
 
 import 'dotenv/config';  // Load environment variables from .env file
-import { runTriage, TriageConfig } from './triageWorkflow.js';
-import { SplunkLogEvent } from './types.js';
+import { parseRawSplunkEvent } from './splunkParser.js';
+import { findSuspectedCommits } from './commitAnalyzer.js';
+import { GitHubService } from './githubService.js';
+import { TriageInput, Commit } from './types.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -32,67 +34,100 @@ interface SplunkTestData {
 }
 
 /**
- * Extract meaningful error message from Splunk _raw field
+ * Simulates the core logic of triageSplunkErrorTool without MCP server
  */
-function extractErrorMessage(rawData: string): string {
+async function testTriageSplunkErrorTool(
+  rawSplunkData: string,
+  repositoryName: string,
+  commitLookbackDays: number = 7
+): Promise<{
+  triageInput: TriageInput;
+  suspectedCommits: Commit[];
+  success: boolean;
+  error?: string;
+}> {
   try {
-    // Try to parse as JSON first
-    const parsed = JSON.parse(rawData);
+    console.log(`\n🔍 Starting automated error triage with Splunk data parsing`);
     
-    // Look for error message in various fields
-    if (parsed['@mt']) {
-      return parsed['@mt']; // Message template
-    }
-    if (parsed['@x']) {
-      return parsed['@x']; // Exception details
-    }
-    if (parsed.message) {
-      return parsed.message;
+    // Step 1: Parse the raw Splunk JSON data and extract structured triage input
+    console.log('📋 Step 1: Parsing raw Splunk data and extracting error information...');
+    const triageInput: TriageInput = await parseRawSplunkEvent(rawSplunkData);
+    
+    console.log('✅ Parsed error details:', {
+      serviceName: triageInput.serviceName,
+      environment: triageInput.environment,
+      exceptionType: triageInput.exceptionType,
+      errorMessage: triageInput.errorMessage.substring(0, 100) + (triageInput.errorMessage.length > 100 ? '...' : ''),
+      stackFrames: triageInput.stackTrace.length,
+      searchKeywords: {
+        files: triageInput.searchKeywords.files.length,
+        methods: triageInput.searchKeywords.methods.length,
+        context: triageInput.searchKeywords.context.length
+      }
+    });
+    
+    // Step 2: Analyze GitHub commits for potential root causes
+    console.log('🔍 Step 2: Analyzing GitHub commits...');
+    const commitLookbackDaysVal = commitLookbackDays || 7;
+    const githubService = new GitHubService();
+    
+    let suspectedCommits: Commit[] = [];
+    if (repositoryName) {
+      try {
+        const lookbackDate = new Date(Date.now() - (commitLookbackDaysVal * 24 * 60 * 60 * 1000)).toISOString();
+        const recentCommits = await githubService.getCommitsSince(repositoryName, lookbackDate);
+        
+        console.log(`📊 Found ${recentCommits.length} recent commits to analyze`);
+        
+        // Use the structured error information for commit analysis
+        const searchTerms = [
+          triageInput.errorMessage,
+          triageInput.exceptionType,
+          ...triageInput.searchKeywords.files.map(f => f.replace('.cs', '')),
+          ...triageInput.searchKeywords.methods,
+          ...triageInput.searchKeywords.context
+        ].join(' ');
+        
+        suspectedCommits = findSuspectedCommits(searchTerms, recentCommits);
+        console.log(`🎯 Identified ${suspectedCommits.length} suspected commits`);
+        
+      } catch (githubError) {
+        console.warn('⚠️  GitHub analysis failed:', githubError instanceof Error ? githubError.message : 'Unknown error');
+      }
+    } else {
+      console.log('⚠️  No repository specified - skipping GitHub analysis');
     }
     
-    // Fallback to raw data (truncated)
-    return rawData.substring(0, 500) + (rawData.length > 500 ? '...' : '');
-  } catch {
-    // If not JSON, return raw data (truncated)
-    return rawData.substring(0, 500) + (rawData.length > 500 ? '...' : '');
+    return {
+      triageInput,
+      suspectedCommits,
+      success: true
+    };
+    
+  } catch (error) {
+    console.error('❌ Triage analysis failed:', error);
+    return {
+      triageInput: {} as TriageInput,
+      suspectedCommits: [],
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 }
 
 /**
- * Transform Splunk test data to SplunkLogEvent format
+ * Load and parse raw Splunk test data for triageSplunkErrorTool testing
  */
-function transformTestData(testData: SplunkTestData[]): SplunkLogEvent[] {
-  return testData.map((item, index) => {
-    const errorMessage = extractErrorMessage(item._raw);
-    
-    return {
-      _time: item._time,
-      message: errorMessage,
-      source: item.source || `test-source-${index}`,
-      serviceName: item.Application || 'unknown-service',
-      environment: item.Environment || 'unknown-environment',
-      level: item['@l'] || 'ERROR'
-    };
-  });
-}
-
-/**
- * Load and parse test data
- */
-function loadTestData(): SplunkLogEvent[] {
+function loadRawTestData(): SplunkTestData[] {
   try {
     console.log('📁 Loading test data from splunk-test-data.json...');
     const testDataPath = join(__dirname, '../../instructions/splunk-test-data.json');
     const rawData = readFileSync(testDataPath, 'utf-8');
     const testData: SplunkTestData[] = JSON.parse(rawData);
     
-    console.log(`✅ Loaded ${testData.length} test records`);
+    console.log(`✅ Loaded ${testData.length} raw Splunk test records`);
     
-    // Transform to expected format
-    const transformedData = transformTestData(testData);
-    console.log(`✅ Transformed ${transformedData.length} records to SplunkLogEvent format`);
-    
-    return transformedData;
+    return testData;
   } catch (error) {
     console.error('❌ Failed to load test data:', error);
     throw error;
@@ -100,109 +135,191 @@ function loadTestData(): SplunkLogEvent[] {
 }
 
 /**
- * Print sample data for debugging
+ * Print sample raw Splunk data for debugging
  */
-function printSampleData(data: SplunkLogEvent[], count: number = 3) {
-  console.log(`\n🔍 Sample data (first ${count} records):`);
+function printSampleRawData(data: SplunkTestData[], count: number = 1) {
+  console.log(`\n🔍 Sample raw Splunk data (first ${count} records):`);
   console.log('=' .repeat(80));
   
-  data.slice(0, count).forEach((log, index) => {
-    console.log(`\nRecord ${index + 1}:`);
-    console.log(`  Time: ${log._time}`);
-    console.log(`  Service: ${log.serviceName}`);
-    console.log(`  Environment: ${log.environment}`);
-    console.log(`  Level: ${log.level}`);
-    console.log(`  Message: ${log.message.substring(0, 150)}${log.message.length > 150 ? '...' : ''}`);
+  data.slice(0, count).forEach((event, index) => {
+    console.log(`\nRaw Splunk Event ${index + 1}:`);
+    console.log(`  Time: ${event._time}`);
+    console.log(`  Application: ${event.Application}`);
+    console.log(`  Environment: ${event.Environment}`);
+    console.log(`  Log Level: ${event['@l']}`);
+    console.log(`  Raw Data Preview: ${event._raw.substring(0, 200)}${event._raw.length > 200 ? '...' : ''}`);
   });
   
   console.log('=' .repeat(80));
 }
 
 /**
- * Run test scenarios
+ * Display detailed analysis results
+ */
+function displayAnalysisResults(
+  triageInput: TriageInput, 
+  suspectedCommits: Commit[], 
+  testName: string
+) {
+  console.log(`\n📋 ${testName} - Analysis Results:`);
+  console.log('=' .repeat(50));
+  console.log(`Service: ${triageInput.serviceName}`);
+  console.log(`Environment: ${triageInput.environment}`);
+  console.log(`Exception: ${triageInput.exceptionType}`);
+  console.log(`Error: ${triageInput.errorMessage}`);
+  console.log(`Stack Frames: ${triageInput.stackTrace.length}`);
+  
+  if (triageInput.stackTrace.length > 0) {
+    console.log('\n🔍 Key Stack Frames:');
+    triageInput.stackTrace.slice(0, 5).forEach((frame, index) => {
+      console.log(`  ${index + 1}. ${frame.method} in ${frame.file}${frame.line ? `:${frame.line}` : ''}`);
+    });
+  }
+  
+  console.log('\n🔍 Search Keywords:');
+  console.log(`  Files: ${triageInput.searchKeywords.files.join(', ')}`);
+  console.log(`  Methods: ${triageInput.searchKeywords.methods.join(', ')}`);
+  console.log(`  Context: ${triageInput.searchKeywords.context.join(', ')}`);
+  
+  if (suspectedCommits.length > 0) {
+    console.log('\n🎯 Suspected Commits:');
+    suspectedCommits.slice(0, 5).forEach((commit, index) => {
+      console.log(`  ${index + 1}. ${commit.hash.substring(0, 8)} - ${commit.message.substring(0, 80)}...`);
+      console.log(`     Author: ${commit.author} | Date: ${commit.date}`);
+    });
+  } else {
+    console.log('\n🎯 No suspected commits found or GitHub analysis skipped');
+  }
+}
+
+/**
+ * Run test scenarios for triageSplunkErrorTool
  */
 async function runTestScenarios() {
   try {
-    console.log('\n🧪 Starting Triage Function Test Suite');
+    console.log('\n🧪 Starting TriageSplunkErrorTool Test Suite');
     console.log('=' .repeat(50));
     
-    // Load test data
-    const testData = loadTestData();
+    // Load raw Splunk test data
+    const rawTestData = loadRawTestData();
     
-    // Print sample data
-    printSampleData(testData);
+    // Print sample raw data
+    printSampleRawData(rawTestData);
     
-    // Test Scenario 1: Dry run with small dataset
-    console.log('\n🔬 Test Scenario 1: Dry Run (Small Dataset)');
-    console.log('-' .repeat(40));
+    // Get first test event for all scenarios
+    const firstEvent = rawTestData[0];
+    const rawEventJson = JSON.stringify(firstEvent);
     
-    const smallDataset = testData.slice(0, 10);
-    const dryRunConfig: TriageConfig = {
-      repositoryName: 'wexhealth/cdh-consumer', // Example repo name
-      commitLookbackDays: 7,
-      createTickets: false // Dry run
-    };
+    // Test Scenario 1: Basic parsing and GitHub analysis
+    console.log('\n🔬 Test Scenario 1: Complete Analysis with GitHub Repository');
+    console.log('-' .repeat(50));
     
-    console.log('Configuration:', dryRunConfig);
-    await runTriage(smallDataset, dryRunConfig);
+    const result1 = await testTriageSplunkErrorTool(
+      rawEventJson,
+      'wexhealth/cdh-consumer', // Example repo name
+      7 // lookback days
+    );
+    
+    if (result1.success) {
+      displayAnalysisResults(result1.triageInput, result1.suspectedCommits, 'Scenario 1');
+      console.log('✅ Test Scenario 1: SUCCESS');
+    } else {
+      console.log(`❌ Test Scenario 1: FAILED - ${result1.error}`);
+    }
     
     // Test Scenario 2: Different repository
     console.log('\n🔬 Test Scenario 2: Different Repository');
-    console.log('-' .repeat(40));
+    console.log('-' .repeat(50));
     
-    const differentRepoConfig: TriageConfig = {
-      repositoryName: 'wexhealth/document-index', // Different repo
-      commitLookbackDays: 3,
-      createTickets: false
-    };
+    const result2 = await testTriageSplunkErrorTool(
+      rawEventJson,
+      'wexhealth/document-index', // Different repo
+      3 // shorter lookback
+    );
     
-    console.log('Configuration:', differentRepoConfig);
-    await runTriage(smallDataset, differentRepoConfig);
-    
-    // Test Scenario 3: Larger dataset
-    console.log('\n🔬 Test Scenario 3: Larger Dataset');
-    console.log('-' .repeat(40));
-    
-    const largerDataset = testData.slice(0, 50);
-    const largerDatasetConfig: TriageConfig = {
-      repositoryName: 'wexhealth/cdh-platform',
-      commitLookbackDays: 5,
-      createTickets: false
-    };
-    
-    console.log('Configuration:', largerDatasetConfig);
-    await runTriage(largerDataset, largerDatasetConfig);
-    
-    // Test Scenario 4: No repository (should handle gracefully)
-    console.log('\n🔬 Test Scenario 4: No Repository Configuration');
-    console.log('-' .repeat(40));
-    
-    const noRepoConfig: TriageConfig = {
-      commitLookbackDays: 7,
-      createTickets: false
-    };
-    
-    console.log('Configuration:', noRepoConfig);
-    await runTriage(smallDataset, noRepoConfig);
-    
-    // Test Scenario 5: Error handling - invalid config
-    console.log('\n🔬 Test Scenario 5: Invalid Configuration (Error Handling)');
-    console.log('-' .repeat(40));
-    
-    try {
-      const invalidConfig: TriageConfig = {
-        repositoryName: 'invalid-repo-name', // Invalid format
-        commitLookbackDays: 35, // Too many days
-        createTickets: false
-      };
-      
-      console.log('Configuration:', invalidConfig);
-      await runTriage(smallDataset, invalidConfig);
-    } catch (error) {
-      console.log('✅ Successfully caught invalid configuration error:', (error as Error).message);
+    if (result2.success) {
+      displayAnalysisResults(result2.triageInput, result2.suspectedCommits, 'Scenario 2');
+      console.log('✅ Test Scenario 2: SUCCESS');
+    } else {
+      console.log(`❌ Test Scenario 2: FAILED - ${result2.error}`);
     }
     
-    console.log('\n🎉 All test scenarios completed successfully!');
+    // Test Scenario 3: No repository (parsing only)
+    console.log('\n🔬 Test Scenario 3: Parsing Only (No Repository)');
+    console.log('-' .repeat(50));
+    
+    const result3 = await testTriageSplunkErrorTool(
+      rawEventJson,
+      '', // no repository
+      7
+    );
+    
+    if (result3.success) {
+      displayAnalysisResults(result3.triageInput, result3.suspectedCommits, 'Scenario 3');
+      console.log('✅ Test Scenario 3: SUCCESS (Parsing only)');
+    } else {
+      console.log(`❌ Test Scenario 3: FAILED - ${result3.error}`);
+    }
+    
+    // Test Scenario 4: Error handling - invalid JSON
+    console.log('\n🔬 Test Scenario 4: Error Handling - Invalid JSON');
+    console.log('-' .repeat(50));
+    
+    const result4 = await testTriageSplunkErrorTool(
+      '{ invalid json', // Invalid JSON
+      'wexhealth/test-repo',
+      7
+    );
+    
+    if (!result4.success) {
+      console.log(`✅ Test Scenario 4: Successfully caught error - ${result4.error}`);
+    } else {
+      console.log('❌ Test Scenario 4: Expected to fail but succeeded');
+    }
+    
+    // Test Scenario 5: Validate expected output format
+    console.log('\n🔬 Test Scenario 5: Output Format Validation');
+    console.log('-' .repeat(50));
+    
+    const result5 = await testTriageSplunkErrorTool(rawEventJson, 'wexhealth/test-repo', 7);
+    if (result5.success) {
+      const triageInput = result5.triageInput;
+      
+      // Validate expected fields
+      const validations = [
+        { name: 'Service Name', value: triageInput.serviceName, expected: 'WexHealth.CDH.Web.Consumer' },
+        { name: 'Environment', value: triageInput.environment, expected: 'QA' },
+        { name: 'Exception Type', value: triageInput.exceptionType, expected: 'WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException' },
+        { name: 'Error Message not empty', value: triageInput.errorMessage.length > 0, expected: true },
+        { name: 'Stack Trace not empty', value: triageInput.stackTrace.length > 0, expected: true },
+        { name: 'Search Keywords Files', value: triageInput.searchKeywords.files.length > 0, expected: true },
+        { name: 'Search Keywords Methods', value: triageInput.searchKeywords.methods.length > 0, expected: true }
+      ];
+      
+      console.log('\n📊 Validation Results:');
+      let passedCount = 0;
+      for (const validation of validations) {
+        const passed = validation.value === validation.expected;
+        console.log(`${passed ? '✅' : '❌'} ${validation.name}: ${passed ? 'PASS' : 'FAIL'}`);
+        if (!passed) {
+          console.log(`   Expected: ${validation.expected}`);
+          console.log(`   Actual:   ${validation.value}`);
+        }
+        if (passed) passedCount++;
+      }
+      
+      console.log(`\n📈 Validation Summary: ${passedCount}/${validations.length} tests passed`);
+      
+      if (passedCount === validations.length) {
+        console.log('✅ Test Scenario 5: All validations PASSED');
+      } else {
+        console.log('⚠️  Test Scenario 5: Some validations FAILED');
+      }
+    } else {
+      console.log(`❌ Test Scenario 5: FAILED - ${result5.error}`);
+    }
+    
+    console.log('\n🎉 All test scenarios completed!');
     
   } catch (error) {
     console.error('\n❌ Test suite failed:', error);
@@ -215,22 +332,20 @@ async function runTestScenarios() {
  */
 function printUsage() {
   console.log(`
-🧪 Triage Function Test Suite
-============================
+🧪 TriageSplunkErrorTool Test Suite
+===================================
 
-This test script validates the runTriage function using real Splunk data.
+This test script validates the triageSplunkErrorTool function using real Splunk data.
 
 Environment Variables (Optional):
   GITHUB_TOKEN - GitHub token for commit analysis
-  JIRA_PAT     - Jira token for ticket creation
-  SPLUNK_URL   - Splunk URL for state management
 
 Test Scenarios:
-  1. Dry run with small dataset
+  1. Complete analysis with GitHub repository
   2. Different repository configuration
-  3. Larger dataset processing
-  4. No repository configuration
-  5. Invalid configuration (error handling)
+  3. Parsing only (no repository)
+  4. Error handling (invalid JSON)
+  5. Output format validation
 
 Usage:
   npm run build && node build/triage/test-triage.js
@@ -251,19 +366,17 @@ async function main() {
     return;
   }
   
-  console.log('🚀 Triage Function Test Suite Starting...');
+  console.log('🚀 TriageSplunkErrorTool Test Suite Starting...');
   console.log(`📅 Started at: ${new Date().toISOString()}`);
   
   // Check environment
   console.log('\n🌍 Environment Check:');
-  console.log(`  GitHub Token: ${process.env.GITHUB_TOKEN ? '✅ Configured' : '❌ Not configured'}`);
-  console.log(`  Jira Token: ${process.env.JIRA_PAT ? '✅ Configured' : '❌ Not configured'}`);
-  console.log(`  Splunk URL: ${process.env.SPLUNK_URL ? '✅ Configured' : '❌ Not configured'}`);
+  console.log(`  GitHub Token: ${process.env.GITHUB_TOKEN ? '✅ Configured' : '❌ Not configured (GitHub analysis will be skipped for some tests)'}`);
   
   await runTestScenarios();
   
   console.log(`\n📅 Completed at: ${new Date().toISOString()}`);
-  console.log('🏁 Test suite finished!');
+  console.log('🏁 TriageSplunkErrorTool test suite finished!');
 }
 
 // Run if this file is executed directly
@@ -274,4 +387,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export { loadTestData, transformTestData, runTestScenarios };
+export { loadRawTestData, testTriageSplunkErrorTool, runTestScenarios };
