@@ -47,10 +47,10 @@ Of course. Given your existing project structure and MCPs, here is a detailed br
     -   `[x]` Create a class `JiraService` with an `async` method `createTriageTicket(summary: string, description: string): Promise<{ issueKey: string }>`. This method will call your existing Jira MCP's tool for creating issues.
 
 6.  **Implement State Management to Prevent Duplicate Tickets**
-    -   `[ ]` In the `src/triage/` directory, create a file named `stateManager.ts`.
-    -   `[ ]` Define a class `StateManager`.
-    -   `[ ]` Create an `async` method `isErrorProcessed(errorSignature: string): Promise<boolean>`. This method should use the existing `search_splunk` tool from your MCP (defined in `overview.md`) to query a summary index (e.g., `triage_summary`) to check if a ticket for this signature has already been created.
-    -   `[ ]` Create an `async` method `markErrorAsProcessed(errorSignature: string, jiraTicketKey: string): Promise<void>`. This method will write a new event to the Splunk summary index (using a Splunk HEC endpoint or another MCP tool) to log that the signature has been processed.
+    -   `[x]` In the `src/triage/` directory, create a file named `stateManager.ts`.
+    -   `[x]` Define a class `StateManager`.
+    -   `[x]` Create an `async` method `isErrorProcessed(errorSignature: string): Promise<boolean>`. This method should use the existing `search_splunk` tool from your MCP (defined in `overview.md`) to query a summary index (e.g., `triage_summary`) to check if a ticket for this signature has already been created.
+    -   `[x]` Create an `async` method `markErrorAsProcessed(errorSignature: string, jiraTicketKey: string): Promise<void>`. This method will write a new event to the Splunk summary index (using a Splunk HEC endpoint or another MCP tool) to log that the signature has been processed.
 
 7.  **Orchestrate the Main Triage Workflow**
     -   `[ ]` Open the main workflow file at `src/triage/triageWorkflow.ts`.
