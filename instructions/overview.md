@@ -13,15 +13,27 @@ azure-devops-mcp/
 │   ├── testCaseUtils.ts              # Azure DevOps test case management
 │   ├── jiraUtils.ts                  # JIRA integration utilities
 │   ├── testing.ts                    # Testing utilities
-│   └── integrations/
-│       └── splunk/                   # Splunk integration (optional)
-│           ├── client.ts             # Splunk HTTP client with singleton pattern
-│           ├── types.ts              # TypeScript interfaces and types
-│           ├── endpoints/
-│           │   └── search.ts         # Search endpoint implementation
-│           └── tools/
-│               ├── index.ts          # Tool exports
-│               └── search.tool.ts    # MCP tool for Splunk search
+│   ├── integrations/
+│   │   └── splunk/                   # Splunk integration (optional)
+│   │       ├── client.ts             # Splunk HTTP client with singleton pattern
+│   │       ├── types.ts              # TypeScript interfaces and types
+│   │       ├── urlBuilder.ts         # Splunk URL builder utility
+│   │       ├── endpoints/
+│   │       │   └── search.ts         # Search endpoint implementation
+│   │       └── tools/
+│   │           ├── index.ts          # Tool exports
+│   │           └── search.tool.ts    # MCP tool for Splunk search
+│   └── triage/                       # Automated error triage system
+│       ├── types.ts                  # Triage-related type definitions
+│       ├── triageWorkflow.ts         # Main triage orchestration logic
+│       ├── triageTool.ts             # MCP tool for triage functionality
+│       ├── errorParser.ts            # Error signature generation and grouping
+│       ├── githubService.ts          # GitHub API integration for commit analysis
+│       ├── commitAnalyzer.ts         # Intelligent commit analysis and scoring
+│       ├── deploymentService.ts      # Deployment information service
+│       ├── jiraFormatter.ts          # Jira ticket formatting and templates
+│       ├── jiraService.ts            # Jira integration for ticket creation
+│       └── stateManager.ts           # State management and duplicate prevention
 │
 ├── build/                            # Compiled JavaScript output
 │   └── [mirrors src/ structure]
@@ -81,13 +93,22 @@ azure-devops-mcp/
 ### 4. **Splunk Integration (`integrations/splunk/`)**
 - **Search capability**: Execute SPL queries against Splunk indexes
 - **Client management**: Singleton pattern with axios-based HTTP client
+- **URL building**: Smart Splunk web UI URL construction from API configuration
 - **Error handling**: Custom SplunkError class with detailed error information
 - **Optional integration**: Gracefully degrades if Splunk is not configured
 
-### 5. **Main Server (`index.ts`)**
+### 5. **Automated Error Triage System (`triage/`)**
+- **Error Analysis**: Intelligent error signature generation and grouping
+- **GitHub Integration**: Real-time commit analysis to identify potential root causes
+- **Commit Scoring**: Relevance-based scoring system for suspected commits
+- **Jira Automation**: Comprehensive ticket creation with investigation context
+- **State Management**: Splunk-based duplicate prevention and processing history
+- **Multi-Service Support**: Handles errors across different services and environments
+
+### 6. **Main Server (`index.ts`)**
 - **Unified item fetching**: Single `fetch-item` tool that intelligently routes to Azure DevOps (numeric IDs) or JIRA (string IDs)
 - **MCP tool registration**: Exposes all functionality as callable tools for AI assistants
-- **Optional services**: Splunk integration is optional and auto-detected at startup
+- **Optional services**: Splunk and GitHub integrations are optional and auto-detected at startup
 
 ## Key Features & Workflows
 
@@ -139,10 +160,96 @@ This architecture enables AI assistants to orchestrate complex test management w
 
 ## Integration Architecture
 
-The system integrates three major platforms:
+The system integrates four major platforms:
 
 1. **Azure DevOps** - Core test management and work item tracking
 2. **JIRA** - Issue tracking and project management with bidirectional linking
 3. **Splunk** (optional) - Observability, log analysis, and metrics monitoring
+4. **GitHub** (optional) - Code repository analysis for automated error triage
 
-All integrations are designed to be optional and fail gracefully, ensuring the core Azure DevOps/JIRA functionality remains available even if Splunk is not configured.
+### **Automated Error Triage Workflow**
+```mermaid
+graph TB
+    A[Splunk Error Logs] --> B[Error Parser<br/>Generate Signatures]
+    B --> C[State Manager<br/>Check Duplicates]
+    C --> D{New Error?}
+    D -->|Yes| E[GitHub Service<br/>Fetch Recent Commits]
+    D -->|No| F[Skip - Already Processed]
+    E --> G[Commit Analyzer<br/>Score Relevance]
+    G --> H[Deployment Service<br/>Get Version Info]
+    H --> I[Jira Formatter<br/>Create Rich Ticket]
+    I --> J[Jira Service<br/>Create Ticket]
+    J --> K[State Manager<br/>Mark as Processed]
+    
+    style A fill:#e1f5fe
+    style J fill:#c8e6c9
+    style F fill:#ffecb3
+```
+
+### **Cross-Platform Data Flow**
+```mermaid
+graph LR
+    A[Error Logs] --> B[Triage System]
+    B --> C[GitHub Commits]
+    B --> D[Jira Tickets]
+    B --> E[Splunk State]
+    
+    F[Azure DevOps] <--> G[JIRA]
+    G --> H[Test Cases]
+    F --> H
+    
+    I[Splunk] --> J[Log Search]
+    I --> K[State Tracking]
+```
+
+All integrations are designed to be optional and fail gracefully, ensuring the core Azure DevOps/JIRA functionality remains available even if optional services (Splunk, GitHub) are not configured.
+
+## Example MCP Tool Usage
+
+### Error Triage Example
+```typescript
+// Analyze production errors automatically
+const result = await mcp.call("triage_splunk_error", {
+  logs: [
+    {
+      _time: "2024-01-15T10:30:00Z",
+      message: "Database connection timeout in OrderService.processOrder()",
+      serviceName: "order-service", 
+      environment: "production",
+      level: "ERROR"
+    }
+  ],
+  config: {
+    repositoryName: "ecommerce/order-service",
+    jiraProjectKey: "PROD",
+    commitLookbackDays: 5
+  }
+});
+```
+
+### Integrated Workflow Example
+```typescript
+// Complete test management workflow
+async function createTestWithMonitoring() {
+  // 1. Create test case
+  const testCase = await mcp.call("create-testcase", {
+    title: "Order processing error handling",
+    steps: "1. Submit invalid order\nExpected: Proper error message",
+    jiraWorkItemId: "PROD-123"
+  });
+  
+  // 2. Monitor related errors
+  const errors = await mcp.call("search_splunk", {
+    search_query: "index=app_logs service=order-service level=ERROR",
+    earliest_time: "-24h"
+  });
+  
+  // 3. Auto-triage any new errors
+  if (errors.length > 0) {
+    await mcp.call("triage_splunk_error", {
+      logs: errors,
+      config: { jiraProjectKey: "PROD" }
+    });
+  }
+}
+```

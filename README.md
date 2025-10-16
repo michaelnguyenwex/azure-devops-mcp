@@ -25,6 +25,12 @@
     *   Automated error triage with GitHub commit analysis
     *   Retrieve recent commits to identify potential root causes
     *   Link Jira tickets to related GitHub pull requests and commits
+*   **Automated Error Triage:**
+    *   Analyze production errors from Splunk logs automatically
+    *   Generate error signatures to group similar issues
+    *   Cross-reference with GitHub commits to identify suspected root causes
+    *   Create detailed Jira tickets with investigation starting points
+    *   Prevent duplicate ticket creation through state management
 
 ## Prerequisites
 
@@ -230,6 +236,156 @@ The following tools are exposed by this MCP server:
         *   Requires Splunk environment variables to be configured (see Configuration section).
         *   If Splunk is not configured, this tool will not be available.
 
+11. **`triage_splunk_error`** (Optional - requires Splunk and GitHub configuration)
+    *   Description: Automatically analyze production errors from Splunk logs and create detailed Jira triage tickets with suspected root causes based on GitHub commit analysis.
+    *   Parameters:
+        *   `logs` (array): Array of Splunk log events to analyze. Each log should have:
+            *   `_time` (string): Timestamp of the log event (ISO format)
+            *   `message` (string): The error message content
+            *   `source` (string, optional): Source system that generated the error
+            *   `serviceName` (string, optional): Name of the service that generated the error
+            *   `environment` (string, optional): Environment where the error occurred (prod, staging, etc.)
+            *   `level` (string, optional): Log level (ERROR, WARN, etc.)
+        *   `config` (object, optional): Configuration for the triage process:
+            *   `repositoryName` (string, optional): GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')
+            *   `jiraProjectKey` (string, optional): Jira project key for creating tickets (e.g., 'PROD', 'OPS')
+            *   `commitLookbackDays` (number, optional): Number of days to look back for commits (1-30, default: 7)
+            *   `createTickets` (boolean, optional): Whether to actually create Jira tickets (false for dry-run mode, default: true)
+    *   Returns:
+        *   Success message with summary of triage analysis results
+    *   Features:
+        *   **Error Signature Generation**: Groups similar errors to avoid duplicate analysis
+        *   **Duplicate Prevention**: Tracks processed errors using Splunk summary indexes
+        *   **GitHub Integration**: Analyzes recent commits for potential root causes
+        *   **Smart Commit Analysis**: Uses keyword extraction and relevance scoring
+        *   **Comprehensive Jira Tickets**: Creates detailed tickets with error context, Splunk links, and suspected commits
+        *   **Graceful Degradation**: Works even when Splunk or GitHub are not configured
+    *   Notes:
+        *   Requires Splunk configuration for log analysis and state tracking
+        *   Requires GitHub token for commit analysis (GITHUB_TOKEN or GITHUB_PAT)
+        *   Splunk URL is auto-detected from existing configuration
+
+
+## Example Usage
+
+Here are examples of how to use the MCP tools:
+
+### Basic Test Case Management
+```javascript
+// Create a new test case with JIRA linking
+await mcp.call("create-testcase", {
+    title: "Test user login functionality",
+    steps: "1. Navigate to login page\n2. Enter valid credentials\n3. Click login button\nExpected: User should be logged in successfully",
+    priority: 2,
+    parentPlanId: 123,
+    parentSuiteId: 456,
+    jiraWorkItemId: "PROJ-789"
+});
+
+// Add existing test cases to a test suite
+await mcp.call("add-testcase-to-testsuite", {
+    testCaseIdString: "1001,1002,1003",
+    planId: 123,
+    suiteId: 456,
+    createCopy: true
+});
+```
+
+### JIRA Integration
+```javascript
+// Create JIRA subtasks with predefined templates
+await mcp.call("create-jira-subtasks", {
+    parentJiraId: "PROJ-123",
+    templateType: "FF", // Feature Flag template
+});
+
+// Or create custom subtasks
+await mcp.call("create-jira-subtasks", {
+    parentJiraId: "PROJ-123",
+    templateType: "customized",
+    subtaskSummaries: [
+        "Implement backend API changes",
+        "Update frontend components",
+        "Write unit tests",
+        "Update documentation"
+    ]
+});
+```
+
+### Splunk Log Analysis
+```javascript
+// Search Splunk logs
+await mcp.call("search_splunk", {
+    search_query: "index=app_logs level=ERROR | head 50",
+    earliest_time: "-24h",
+    latest_time: "now",
+    max_results: 50
+});
+```
+
+### Automated Error Triage
+```javascript
+// Analyze production errors and create Jira tickets automatically
+await mcp.call("triage_splunk_error", {
+    logs: [
+        {
+            _time: "2024-01-15T10:30:00.000Z",
+            message: "NullPointerException in UserService.getUserById() at line 45",
+            serviceName: "user-service",
+            environment: "production",
+            level: "ERROR"
+        },
+        {
+            _time: "2024-01-15T10:31:00.000Z", 
+            message: "NullPointerException in UserService.getUserById() at line 45",
+            serviceName: "user-service", 
+            environment: "production",
+            level: "ERROR"
+        }
+    ],
+    config: {
+        repositoryName: "mycompany/user-service",
+        jiraProjectKey: "PROD",
+        commitLookbackDays: 7,
+        createTickets: true
+    }
+});
+
+// Dry run mode (analyze but don't create tickets)
+await mcp.call("triage_splunk_error", {
+    logs: [...],
+    config: {
+        repositoryName: "mycompany/user-service",
+        createTickets: false // Dry run mode
+    }
+});
+```
+
+### Multi-Platform Workflow Example
+```javascript
+// Complete workflow: Create test case, link to JIRA, and monitor results
+async function completeTestWorkflow() {
+    // 1. Create test case
+    const testCase = await mcp.call("create-testcase", {
+        title: "API endpoint authentication test",
+        steps: "1. Send request without auth token\nExpected: 401 Unauthorized\n2. Send request with valid token\nExpected: 200 OK",
+        jiraWorkItemId: "AUTH-456"
+    });
+    
+    // 2. Link to automation
+    await mcp.call("update-automated-test", {
+        testCaseId: testCase.id,
+        automatedTestName: "ApiTests.AuthenticationTests.TestEndpointAuth",
+        automatedTestStorage: "ApiTests.dll"
+    });
+    
+    // 3. Monitor test execution in Splunk
+    await mcp.call("search_splunk", {
+        search_query: `index=test_results test_case_id=${testCase.id} | head 20`,
+        earliest_time: "-7d"
+    });
+}
+```
 
 ## Development
 
