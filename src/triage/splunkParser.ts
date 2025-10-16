@@ -45,30 +45,63 @@ export async function parseRawSplunkEvent(rawEvent: RawSplunkEvent): Promise<Tri
       triageInput.errorMessage = 'No error message found';
     }
     
-    // Parse stack trace from @mt field
-    const messageTemplate = parsedRawData['@mt'];
-    const stackTraceMarker = '[StackTrace]:';
-    const stackTraceIndex = messageTemplate.indexOf(stackTraceMarker);
+    // Parse stack trace from @x exception field (reuse exceptionLines already declared above)
     
-    if (stackTraceIndex !== -1) {
-      // Extract the stack trace portion after the [StackTrace]: marker
-      const stackTraceString = messageTemplate.substring(stackTraceIndex + stackTraceMarker.length).trim();
+    // Regex to parse .NET stack trace format: "at ClassName.MethodName(...) in filepath:line lineNumber"
+    const stackFrameRegex = /at\s+.*?\.(?<method>[^.(]+)(?:\([^)]*\))?\s+in\s+.*?[\\\/](?<file>[^\\\/\s]+):line\s+(?<line>\d+)/;
+    // Regex for frames without line numbers but with clear method names
+    const stackFrameNoLineRegex = /at\s+.*?\.(?<method>[^.(]+)(?:\([^)]*\))?$/;
+    
+    // System/framework namespaces to filter out
+    const systemNamespaces = [
+      'System.Runtime.ExceptionServices',
+      'System.Runtime.CompilerServices',
+      'System.Threading.Tasks'
+    ];
+    
+    for (const line of exceptionLines) {
+      // Skip system/framework stack frames
+      if (systemNamespaces.some(ns => line.includes(ns))) {
+        continue;
+      }
       
-      // Split by '=>' delimiter to get individual stack frames
-      const frameStrings = stackTraceString.split('=>');
-      
-      // Regex to parse frame format: [Assembly]:assembly;[File]:file.cs;[Method]:method(lineNumber)
-      const frameRegex = /\[File\]:(?<file>.*?);?\[Method\]:(?<method>.*?)(\((?<line>\d+)\))?/;
-      
-      for (const frameString of frameStrings) {
-        const match = frameRegex.exec(frameString.trim());
-        if (match && match.groups) {
-          const frame: StackFrame = {
-            file: match.groups.file,
-            method: match.groups.method,
-            line: match.groups.line ? parseInt(match.groups.line) : null
-          };
-          triageInput.stackTrace.push(frame);
+      const lineMatch = stackFrameRegex.exec(line.trim());
+      if (lineMatch && lineMatch.groups) {
+        const frame: StackFrame = {
+          file: lineMatch.groups.file,
+          method: lineMatch.groups.method,
+          line: parseInt(lineMatch.groups.line)
+        };
+        triageInput.stackTrace.push(frame);
+      } else {
+        // Try to match frames without line numbers for application code
+        const noLineMatch = stackFrameNoLineRegex.exec(line.trim());
+        if (noLineMatch && noLineMatch.groups && !line.includes('System.')) {
+          let methodName = noLineMatch.groups.method;
+          
+          // Check if this line contains an async method in angle brackets
+          const asyncMethodMatch = line.match(/<([^>]+)>/);
+          if (asyncMethodMatch) {
+            methodName = asyncMethodMatch[1];
+          }
+          
+          // Extract class name to infer file name  
+          const classMatch = line.match(/at\s+([\w.]+)\./);
+          if (classMatch) {
+            const fullClassName = classMatch[1];
+            const classNameParts = fullClassName.split('.');
+            const className = classNameParts[classNameParts.length - 1];
+            
+            // Only include if it looks like application code
+            if (className.includes('Api') || className.includes('Client') || className.includes('Service') || className.includes('Provider') || className.includes('Extensions')) {
+              const frame: StackFrame = {
+                file: className + '.cs',
+                method: methodName,
+                line: null
+              };
+              triageInput.stackTrace.push(frame);
+            }
+          }
         }
       }
     }
@@ -100,6 +133,7 @@ export async function parseRawSplunkEvent(rawEvent: RawSplunkEvent): Promise<Tri
     }
     
     // Extract service name from the message template if available
+    const messageTemplate = parsedRawData['@mt'];
     const serviceMatch = messageTemplate.match(/\[(\w+Service)\]/);
     if (serviceMatch) {
       contextKeywords.push(serviceMatch[1]);

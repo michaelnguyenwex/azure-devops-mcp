@@ -52,7 +52,7 @@ Here is a very detailed, numbered list of 1-point stories to implement the raw S
     -   `[x]` Update the main `runTriage` function signature to accept a `RawSplunkEvent` as its input instead of a `TriageInput`.
     -   `[x]` As the first step inside `runTriage`, call `await parseRawSplunkEvent(rawEvent)` and use the returned structured object for the rest of the workflow.
 9.  **Create test script**
-    -   `[ ]` Create a test script using sample data from `C:\Users\W514918\source\repos\azure-devops-mcp\instructions\splunk-test-data.json` to validate if the output is matched with the sample output JSON.
+    -   `[x]` Create a test script using sample data from `C:\Users\W514918\source\repos\azure-devops-mcp\instructions\splunk-test-data.json` to validate if the output is matched with the sample output JSON.
 
 
 Sample output JSON:
