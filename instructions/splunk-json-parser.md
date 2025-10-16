@@ -25,25 +25,25 @@ Here is a very detailed, numbered list of 1-point stories to implement the raw S
     -   `[x]` Map the `timestamp` property from `rawEvent._time`. Ensure the value is converted to a standard ISO 8601 UTC format by creating a new `Date` object and calling `.toISOString()`.
 
 5.  **Implement Core Error and Exception Parsing**
-    -   `[ ]` Access the exception string from the parsed raw data object's `@x` property.
-    -   `[ ]` Split the `@x` string into lines and take the first line.
-    -   `[ ]` Find the index of the first colon (`:`) in the first line.
-    -   `[ ]` The substring *before* the colon is the `exceptionType`. Assign it to your `TriageInput` object.
-    -   `[ ]` The substring *after* the colon is the `errorMessage`. Trim any leading/trailing whitespace and quotes, then assign it to your `TriageInput` object.
+    -   `[x]` Access the exception string from the parsed raw data object's `@x` property.
+    -   `[x]` Split the `@x` string into lines and take the first line.
+    -   `[x]` Find the index of the first colon (`:`) in the first line.
+    -   `[x]` The substring *before* the colon is the `exceptionType`. Assign it to your `TriageInput` object.
+    -   `[x]` The substring *after* the colon is the `errorMessage`. Trim any leading/trailing whitespace and quotes, then assign it to your `TriageInput` object.
 
 6.  **Implement Custom Stack Trace Parsing with Regex**
-    -   `[ ]` Access the message template string from the parsed raw data object's `@mt` property.
-    -   `[ ]` Isolate the portion of the string that contains the `[StackTrace]` data.
-    -   `[ ]` Split the stack trace string by the `=>` delimiter to get an array of individual stack frames.
-    -   `[ ]` Define a regular expression with named capture groups to extract the file, method, and line number from a frame string (e.g., `\[File\]:(?<file>.*?);\[Method\]:(?<method>.*?)\((?<line>\d+)?\)`).
-    -   `[ ]` Initialize an empty `stackTrace` array on your `TriageInput` object.
-    -   `[ ]` Loop through each frame string. Execute the regex on it, and if it matches, create a `{ file, method, line }` object and push it to the `stackTrace` array. Convert the line number to a number type.
+    -   `[x]` Access the message template string from the parsed raw data object's `@mt` property.
+    -   `[x]` Isolate the portion of the string that contains the `[StackTrace]` data.
+    -   `[x]` Split the stack trace string by the `=>` delimiter to get an array of individual stack frames.
+    -   `[x]` Define a regular expression with named capture groups to extract the file, method, and line number from a frame string (e.g., `\[File\]:(?<file>.*?);\[Method\]:(?<method>.*?)\((?<line>\d+)?\)`).
+    -   `[x]` Initialize an empty `stackTrace` array on your `TriageInput` object.
+    -   `[x]` Loop through each frame string. Execute the regex on it, and if it matches, create a `{ file, method, line }` object and push it to the `stackTrace` array. Convert the line number to a number type.
 
 7.  **Implement Keyword Aggregation Logic**
-    -   `[ ]` Initialize the `searchKeywords` object on your `TriageInput` object with empty arrays for `files`, `methods`, and `context`.
-    -   `[ ]` Create a `Set<string>` from the `file` properties of your newly created `stackTrace` array to get a unique list of file names. Convert the Set back to an array and assign it to `searchKeywords.files`.
-    -   `[ ]` Create a `Set<string>` from the `method` properties of the `stackTrace` array to get a unique list of method names. Convert the Set back to an array and assign it to `searchKeywords.methods`.
-    -   `[ ]` Populate the `searchKeywords.context` array with the `exceptionType` and any other relevant context strings you can reliably extract from the parsed raw data (e.g., `SourceContext`).
+    -   `[x]` Initialize the `searchKeywords` object on your `TriageInput` object with empty arrays for `files`, `methods`, and `context`.
+    -   `[x]` Create a `Set<string>` from the `file` properties of your newly created `stackTrace` array to get a unique list of file names. Convert the Set back to an array and assign it to `searchKeywords.files`.
+    -   `[x]` Create a `Set<string>` from the `method` properties of the `stackTrace` array to get a unique list of method names. Convert the Set back to an array and assign it to `searchKeywords.methods`.
+    -   `[x]` Populate the `searchKeywords.context` array with the `exceptionType` and any other relevant context strings you can reliably extract from the parsed raw data (e.g., `SourceContext`).
 
 8.  **Finalize and Integrate the Parser Function**
     -   `[ ]` At the end of the `parseRawSplunkEvent` function, return the fully constructed `TriageInput` object.
