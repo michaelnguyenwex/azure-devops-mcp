@@ -21,9 +21,6 @@ export interface TriageConfig {
   /** Number of days to look back for commits */
   commitLookbackDays?: number;
   
-  /** Base URL for Splunk to create links */
-  splunkBaseUrl?: string;
-  
   /** Whether to actually create Jira tickets (false for dry-run) */
   createTickets?: boolean;
 }
@@ -56,7 +53,6 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
       repositoryName: 'company/service-repo', // Default - should be configurable
       jiraProjectKey: 'PROD',
       commitLookbackDays: 7,
-      splunkBaseUrl: 'https://splunk.company.com',
       createTickets: true,
       ...config
     };
@@ -126,7 +122,7 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
         console.log(`Identified ${suspectedCommits.length} suspected commits`);
         
         // Step 2f: Build triage data
-        const splunkLink = await SplunkUrlBuilder.buildSearchLink(signature, firstSeen, triageConfig.splunkBaseUrl);
+        const splunkLink = await SplunkUrlBuilder.buildSearchLink(signature, firstSeen);
         const triageData: TriageData = {
           errorSignature: signature,
           errorCount: errorLogs.length,

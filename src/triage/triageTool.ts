@@ -29,7 +29,6 @@ export function triageSplunkErrorTool(server: McpServer) {
         repositoryName: z.string().optional().describe("GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')"),
         jiraProjectKey: z.string().optional().describe("Jira project key for creating tickets (e.g., 'PROD', 'OPS')"),
         commitLookbackDays: z.number().min(1).max(30).optional().describe("Number of days to look back for commits (1-30, default: 7)"),
-        splunkBaseUrl: z.string().optional().describe("Base URL for Splunk instance to create investigation links"),
         createTickets: z.boolean().optional().describe("Whether to actually create Jira tickets (false for dry-run mode, default: true)")
       }).optional().describe("Optional configuration for the triage process")
     },
@@ -47,7 +46,8 @@ export function triageSplunkErrorTool(server: McpServer) {
           jiraProjectKey: triageConfig.jiraProjectKey || 'PROD',
           commitLookbackDays: triageConfig.commitLookbackDays || 7,
           createTickets: triageConfig.createTickets !== false,
-          dryRun: triageConfig.createTickets === false
+          dryRun: triageConfig.createTickets === false,
+          splunkAutoDetected: true // Splunk URL now auto-detected from existing config
         });
         
         // Run the triage workflow
