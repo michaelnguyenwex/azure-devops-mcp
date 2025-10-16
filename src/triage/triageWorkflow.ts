@@ -126,10 +126,11 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
         console.log(`Identified ${suspectedCommits.length} suspected commits`);
         
         // Step 2f: Build triage data
+        const splunkLink = await SplunkUrlBuilder.buildSearchLink(signature, firstSeen, triageConfig.splunkBaseUrl);
         const triageData: TriageData = {
           errorSignature: signature,
           errorCount: errorLogs.length,
-          splunkLink: SplunkUrlBuilder.buildSearchLink(signature, firstSeen, triageConfig.splunkBaseUrl),
+          splunkLink: splunkLink,
           errorMessage: firstError.message,
           firstSeen,
           suspectedCommits,
@@ -139,7 +140,7 @@ export async function runTriage(logs: SplunkLogEvent[], config: TriageConfig = {
         };
         
         // Step 2g: Create Jira ticket
-        if (triageConfig.createTickets) {
+        if (false && triageConfig.createTickets) {
           console.log('Creating Jira ticket...');
           
           try {

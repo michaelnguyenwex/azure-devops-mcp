@@ -13,11 +13,11 @@ export class SplunkUrlBuilder {
    * @param customBaseUrl - Optional custom base URL (overrides config)
    * @returns URL to Splunk search results
    */
-  static buildSearchLink(
+  static async buildSearchLink(
     errorSignature: string, 
     firstSeen: string,
     customBaseUrl?: string
-  ): string {
+  ): Promise<string> {
     try {
       let baseUrl: string;
 
@@ -27,7 +27,7 @@ export class SplunkUrlBuilder {
       } else {
         // Build URL from existing Splunk config
         try {
-          const config = getSplunkConfig();
+          const config = await getSplunkConfig();
           // Convert API config to web UI URL (usually different port)
           // API is typically :8089, Web UI is typically :8000 or :443
           const webPort = config.port === 8089 ? 8000 : config.port;
@@ -68,7 +68,7 @@ export class SplunkUrlBuilder {
    * @param customBaseUrl - Optional custom base URL
    * @returns URL to the Splunk dashboard
    */
-  static buildDashboardLink(dashboardName: string, customBaseUrl?: string): string {
+  static async buildDashboardLink(dashboardName: string, customBaseUrl?: string): Promise<string> {
     try {
       let baseUrl: string;
 
@@ -76,7 +76,7 @@ export class SplunkUrlBuilder {
         baseUrl = customBaseUrl.replace(/\/+$/, '');
       } else {
         try {
-          const config = getSplunkConfig();
+          const config = await getSplunkConfig();
           const webPort = config.port === 8089 ? 8000 : config.port;
           baseUrl = `${config.scheme}://${config.host}:${webPort}`;
         } catch {
@@ -98,9 +98,9 @@ export class SplunkUrlBuilder {
    * 
    * @returns Base URL for Splunk web interface
    */
-  static getBaseUrl(): string | null {
+  static async getBaseUrl(): Promise<string | null> {
     try {
-      const config = getSplunkConfig();
+      const config = await getSplunkConfig();
       const webPort = config.port === 8089 ? 8000 : config.port;
       return `${config.scheme}://${config.host}:${webPort}`;
     } catch {
