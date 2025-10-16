@@ -190,7 +190,9 @@ export async function runTriageFromRawEvent(rawEvent: RawSplunkEvent, config: Tr
   
   try {
     // Step 1: Parse the raw event into a structured TriageInput
-    const triageInput = await parseRawSplunkEvent(rawEvent);
+    // Convert the RawSplunkEvent object to JSON string as expected by parseRawSplunkEvent
+    const rawEventJson = JSON.stringify(rawEvent);
+    const triageInput = await parseRawSplunkEvent(rawEventJson);
     
     console.log('Successfully parsed raw Splunk event:', {
       serviceName: triageInput.serviceName,

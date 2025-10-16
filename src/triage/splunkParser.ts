@@ -1,14 +1,17 @@
 import { RawSplunkEvent, ParsedRawData, TriageInput, StackFrame, SearchKeywords } from './types.js';
 
 /**
- * Parses a raw Splunk event into a structured TriageInput object.
+ * Parses a raw Splunk JSON string into a structured TriageInput object.
  * 
- * @param rawEvent - The raw Splunk event to parse
+ * @param rawSplunkJson - The raw Splunk JSON string to parse
  * @returns A structured TriageInput object ready for triage processing
  */
-export async function parseRawSplunkEvent(rawEvent: RawSplunkEvent): Promise<TriageInput> {
+export async function parseRawSplunkEvent(rawSplunkJson: string): Promise<TriageInput> {
   try {
-    // Parse the _raw JSON string
+    // First parse the outer Splunk event JSON
+    const rawEvent: RawSplunkEvent = JSON.parse(rawSplunkJson);
+    
+    // Then parse the _raw JSON string inside it
     const parsedRawData: ParsedRawData = JSON.parse(rawEvent._raw);
     
     // Create the TriageInput object with basic field mappings

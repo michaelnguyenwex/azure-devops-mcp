@@ -26,17 +26,13 @@ async function testSplunkParser() {
     const firstEvent = testData[0];
     console.log('Testing with first event...\n');
 
-    // Prepare the raw event
-    const rawEvent: RawSplunkEvent = {
-      _raw: firstEvent._raw,
-      Application: firstEvent.Application,
-      Environment: firstEvent.Environment,
-      _time: firstEvent._time
-    };
+    // The parseRawSplunkEvent function expects a JSON string, not an object
+    // So we need to pass the entire first event as a JSON string
+    const rawEventJson = JSON.stringify(firstEvent);
 
     // Parse the event
     console.log('Parsing raw event...');
-    const parsedResult = await parseRawSplunkEvent(rawEvent);
+    const parsedResult = await parseRawSplunkEvent(rawEventJson);
 
     // Display results
     console.log('\n=== PARSED RESULT ===');

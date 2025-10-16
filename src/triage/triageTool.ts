@@ -27,18 +27,9 @@ export function triageSplunkErrorTool(server: McpServer) {
       try {
         console.log(`\n🔍 Starting automated error triage with Splunk data parsing`);
         
-        // Step 1: Parse the raw Splunk JSON data
-        console.log('📋 Step 1: Parsing raw Splunk data...');
-        let parsedSplunkEvent: RawSplunkEvent;
-        try {
-          parsedSplunkEvent = JSON.parse(rawSplunkData) as RawSplunkEvent;
-        } catch (parseError) {
-          throw new Error(`Failed to parse raw Splunk JSON: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`);
-        }
-        
-        // Step 2: Extract structured triage input
-        console.log('🏗️  Step 2: Extracting structured error information...');
-        const triageInput: TriageInput = await parseRawSplunkEvent(parsedSplunkEvent);
+        // Step 1: Parse the raw Splunk JSON data and extract structured triage input
+        console.log('📋 Step 1: Parsing raw Splunk data and extracting error information...');
+        const triageInput: TriageInput = await parseRawSplunkEvent(rawSplunkData);
         
         console.log('✅ Parsed error details:', {
           serviceName: triageInput.serviceName,
