@@ -4,6 +4,7 @@
  * Simple test script for quick triage testing with minimal setup
  */
 
+import 'dotenv/config';  // Load environment variables from .env file
 import { runTriage, TriageConfig } from './triageWorkflow.js';
 import { SplunkLogEvent } from './types.js';
 
@@ -77,7 +78,7 @@ async function runSimpleTest() {
     
     // Configure test
     const config: TriageConfig = {
-      repositoryName: 'mycompany/test-service', // Replace with your repo
+      repositoryName: 'wexinc/health-cdh-consumerinvestment-portal', // Replace with your repo
       commitLookbackDays: 7,
       createTickets: false // Dry run mode
     };

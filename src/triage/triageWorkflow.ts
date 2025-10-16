@@ -207,7 +207,7 @@ export function validateTriageInput(logs: SplunkLogEvent[], config: TriageConfig
   }
   
   // Validate that logs have required fields
-  const invalidLogs = logs.filter(log => !log._time || !log.message);
+  const invalidLogs = logs.filter(log => !log.message);
   if (invalidLogs.length > 0) {
     throw new Error(`Found ${invalidLogs.length} log events missing required fields (_time, message)`);
   }

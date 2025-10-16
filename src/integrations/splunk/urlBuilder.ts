@@ -34,7 +34,7 @@ export class SplunkUrlBuilder {
           baseUrl = `${config.scheme}://${config.host}:${webPort}`;
         } catch {
           // If Splunk config is not available, return a placeholder
-          console.warn('⚠️  Splunk not configured - returning placeholder search URL');
+          console.warn('⚠️  Splunk not configured - using placeholder URL (set SPLUNK_URL to enable real Splunk links)');
           return 'https://your-splunk.com/en-US/app/search/search';
         }
       }

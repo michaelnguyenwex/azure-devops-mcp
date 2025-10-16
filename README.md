@@ -237,25 +237,24 @@ The following tools are exposed by this MCP server:
         *   If Splunk is not configured, this tool will not be available.
 
 11. **`triage_splunk_error`** (Optional - requires GitHub configuration)
-    *   Description: Automatically analyze production errors and create detailed Jira triage tickets with suspected root causes based on GitHub commit analysis.
+    *   Description: Automatically analyze production errors and identify suspected root causes through GitHub commit analysis.
     *   Parameters:
         *   `errorMessages` (array): Array of error message strings to analyze for triage
         *   `repositoryName` (string, optional): GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')
         *   `commitLookbackDays` (number, optional): Number of days to look back for commits (1-30, default: 7)
-        *   `createTickets` (boolean, optional): Whether to actually create Jira tickets (false for dry-run mode, default: true)
     *   Returns:
         *   Success message with summary of triage analysis results
     *   Features:
         *   **Error Signature Generation**: Groups similar errors to avoid duplicate analysis
-        *   **Duplicate Prevention**: Tracks processed errors using Splunk summary indexes
         *   **GitHub Integration**: Analyzes recent commits for potential root causes
         *   **Smart Commit Analysis**: Uses keyword extraction and relevance scoring
-        *   **Comprehensive Jira Tickets**: Creates detailed tickets with error context, Splunk links, and suspected commits
-        *   **Graceful Degradation**: Works even when Splunk or GitHub are not configured
+        *   **Investigation Insights**: Provides detailed analysis for manual investigation
+        *   **Graceful Degradation**: Works even when GitHub is not configured
     *   Notes:
+        *   Analysis-only tool - does not create tickets automatically
         *   Requires GitHub token for commit analysis (GITHUB_TOKEN or GITHUB_PAT)
         *   Simplified interface - just provide error messages and repository information
-        *   Automatically handles error grouping and duplicate prevention
+        *   Results can be used to manually create tickets or for further investigation
 
 
 ## Example Usage
@@ -317,7 +316,7 @@ await mcp.call("search_splunk", {
 
 ### Automated Error Triage
 ```javascript
-// Analyze production errors and create Jira tickets automatically
+// Analyze production errors for investigation insights
 await mcp.call("triage_splunk_error", {
     errorMessages: [
         "NullPointerException in UserService.getUserById() at line 45",
@@ -325,18 +324,17 @@ await mcp.call("triage_splunk_error", {
         "Authentication failed for user session validation"
     ],
     repositoryName: "mycompany/user-service",
-    commitLookbackDays: 7,
-    createTickets: true
+    commitLookbackDays: 7
 });
 
-// Dry run mode (analyze but don't create tickets)
+// Quick analysis with different lookback period
 await mcp.call("triage_splunk_error", {
     errorMessages: [
         "API rate limit exceeded in PaymentService.charge()",
         "Invalid JSON payload in webhook handler"
     ],
     repositoryName: "mycompany/payment-service",
-    createTickets: false // Dry run mode
+    commitLookbackDays: 3
 });
 ```
 

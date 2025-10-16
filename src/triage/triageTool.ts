@@ -6,22 +6,22 @@ import { SplunkLogEvent } from './types.js';
 /**
  * Registers the triage Splunk error tool with the MCP server.
  * 
- * This tool automatically analyzes production errors from Splunk logs, identifies potential root causes
- * by cross-referencing with recent GitHub commits, and creates detailed Jira tickets.
+ * This tool automatically analyzes production errors, identifies potential root causes
+ * by cross-referencing with recent GitHub commits, and provides detailed investigation insights.
+ * This is an analysis-only tool that does not create tickets.
  * 
  * @param server - The MCP server instance to register the tool with
  */
 export function triageSplunkErrorTool(server: McpServer) {
   server.tool(
     "triage_splunk_error",
-    "Automatically analyze production errors and create detailed Jira triage tickets with suspected root causes from GitHub commit analysis",
+    "Automatically analyze production errors and identify suspected root causes through GitHub commit analysis",
     {
       errorMessages: z.array(z.string()).describe("Array of error messages to analyze for triage"),
-      repositoryName: z.string().optional().describe("GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')"),
-      commitLookbackDays: z.number().min(1).max(30).optional().describe("Number of days to look back for commits (1-30, default: 7)"),
-      createTickets: z.boolean().optional().describe("Whether to actually create Jira tickets (false for dry-run mode, default: true)")
+      repositoryName: z.string().describe("GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')"),
+      commitLookbackDays: z.number().min(1).max(30).optional().describe("Number of days to look back for commits (1-30, default: 7)")
     },
-    async ({ errorMessages, repositoryName, commitLookbackDays, createTickets }) => {
+    async ({ errorMessages, repositoryName, commitLookbackDays }) => {
       try {
         console.log(`\n🔍 Starting automated error triage for ${errorMessages.length} error messages`);
         
@@ -40,7 +40,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         const finalConfig: TriageConfig = {
           repositoryName: repositoryName || undefined,
           commitLookbackDays: commitLookbackDays || 7,
-          createTickets: createTickets !== false
+          createTickets: false // Always run in dry-run mode for triage analysis
         };
 
         // Validate input
@@ -51,8 +51,7 @@ export function triageSplunkErrorTool(server: McpServer) {
           errorCount: errorMessages.length,
           repositoryName: finalConfig.repositoryName || 'not specified',
           commitLookbackDays: finalConfig.commitLookbackDays,
-          createTickets: finalConfig.createTickets,
-          dryRun: !finalConfig.createTickets
+          mode: 'analysis-only (no tickets created)'
         });
         
         // Run the triage workflow
@@ -61,7 +60,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         return {
           content: [{
             type: "text",
-            text: `✅ Triage analysis completed successfully!\n\nProcessed ${errorMessages.length} error messages for automated analysis and Jira ticket creation. Check the console output above for detailed results including:\n\n• Number of unique error signatures identified\n• Jira tickets created for new errors\n• Errors skipped (already processed)\n• GitHub commits analyzed for potential root causes\n\nThe triage system helps reduce manual debugging effort by automatically:\n1. 🔍 Identifying and grouping similar errors\n2. 💻 Analyzing recent commits for suspected causes\n3. 🎫 Creating detailed Jira tickets with investigation starting points\n4. 📋 Preventing duplicate tickets for known issues`
+            text: `✅ Triage analysis completed successfully!\n\nProcessed ${errorMessages.length} error messages for automated analysis. Check the console output above for detailed results including:\n\n• Number of unique error signatures identified\n• Errors grouped by similarity\n• GitHub commits analyzed for potential root causes\n• Suspected commits identified for investigation\n\nThe triage analysis provides:\n1. 🔍 Error signature generation and grouping\n2. 💻 GitHub commit correlation analysis\n3. 📊 Detailed investigation starting points\n4. 🎯 Root cause suggestions based on recent changes\n\nThis analysis can be used to manually create Jira tickets or for further investigation.`
           }]
         };
         
@@ -71,7 +70,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         return {
           content: [{
             type: "text", 
-            text: `❌ Error triage failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\nThis could be due to:\n• Empty or invalid error messages\n• Configuration issues (invalid repository name format)\n• Service connectivity problems (GitHub, Jira)\n• Insufficient permissions for required operations\n\nPlease check the error details above and verify your configuration.`
+            text: `❌ Error triage analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\nThis could be due to:\n• Empty or invalid error messages\n• Configuration issues (invalid repository name format)\n• Service connectivity problems (GitHub)\n• Insufficient permissions for GitHub repository access\n\nPlease check the error details above and verify your configuration.`
           }]
         };
       }

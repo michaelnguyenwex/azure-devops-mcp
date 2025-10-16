@@ -10,6 +10,7 @@
  * 4. Provides detailed output for debugging and validation
  */
 
+import 'dotenv/config';  // Load environment variables from .env file
 import { runTriage, TriageConfig } from './triageWorkflow.js';
 import { SplunkLogEvent } from './types.js';
 import { readFileSync } from 'fs';

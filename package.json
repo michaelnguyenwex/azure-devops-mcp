@@ -7,7 +7,8 @@
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "test:triage": "npm run build && node build/triage/test-triage.js",
-    "test:triage-simple": "npm run build && node build/triage/test-simple.js"
+    "test:triage-simple": "npm run build && node build/triage/test-simple.js",
+    "test:github": "npm run build && node build/triage/test-github.js"
   },
   "bin": {
     "azdo-mcp": "./build/index.js"

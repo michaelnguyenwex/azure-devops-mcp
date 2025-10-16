@@ -216,8 +216,7 @@ const result = await mcp.call("triage_splunk_error", {
     "API rate limit exceeded in PaymentService.charge()"
   ],
   repositoryName: "ecommerce/order-service",
-  commitLookbackDays: 5,
-  createTickets: true
+  commitLookbackDays: 5
 });
 ```
 
@@ -244,7 +243,7 @@ async function createTestWithMonitoring() {
     await mcp.call("triage_splunk_error", {
       errorMessages: errorMessages,
       repositoryName: "ecommerce/order-service",
-      createTickets: true
+      commitLookbackDays: 7
     });
   }
 }
