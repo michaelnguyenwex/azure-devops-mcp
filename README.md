@@ -237,24 +237,25 @@ The following tools are exposed by this MCP server:
         *   If Splunk is not configured, this tool will not be available.
 
 11. **`triage_splunk_error`** (Optional - requires GitHub configuration)
-    *   Description: Automatically analyze production errors and identify suspected root causes through GitHub commit analysis.
+    *   Description: Parse raw Splunk JSON data and analyze GitHub commits to identify suspected root causes for production errors.
     *   Parameters:
-        *   `errorMessages` (array): Array of error message strings to analyze for triage
-        *   `repositoryName` (string, optional): GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')
+        *   `rawSplunkData` (string): Raw Splunk JSON string containing error details, stack trace, and metadata
+        *   `repositoryName` (string): GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')
         *   `commitLookbackDays` (number, optional): Number of days to look back for commits (1-30, default: 7)
     *   Returns:
         *   Success message with summary of triage analysis results
     *   Features:
-        *   **Error Signature Generation**: Groups similar errors to avoid duplicate analysis
+        *   **Splunk Data Parsing**: Extracts structured error information from raw Splunk JSON
+        *   **Stack Trace Analysis**: Parses .NET stack traces to identify key files and methods
         *   **GitHub Integration**: Analyzes recent commits for potential root causes
-        *   **Smart Commit Analysis**: Uses keyword extraction and relevance scoring
-        *   **Investigation Insights**: Provides detailed analysis for manual investigation
-        *   **Graceful Degradation**: Works even when GitHub is not configured
+        *   **Smart Commit Analysis**: Uses extracted keywords from stack traces and error details
+        *   **Investigation Insights**: Provides detailed analysis with file/method context
     *   Notes:
         *   Analysis-only tool - does not create tickets automatically
         *   Requires GitHub token for commit analysis (GITHUB_TOKEN or GITHUB_PAT)
-        *   Simplified interface - just provide error messages and repository information
-        *   Results can be used to manually create tickets or for further investigation
+        *   Input must be raw Splunk JSON with _raw field containing error details
+        *   Extracts stack traces, exception types, and service context automatically
+        *   Results provide structured analysis for manual investigation
 
 
 ## Example Usage
@@ -316,24 +317,24 @@ await mcp.call("search_splunk", {
 
 ### Automated Error Triage
 ```javascript
-// Analyze production errors for investigation insights
+// Analyze raw Splunk JSON data for investigation insights
+const rawSplunkData = JSON.stringify({
+    "Application": "WexHealth.CDH.Web.Consumer",
+    "Environment": "QA", 
+    "_time": "2025-10-16T09:13:57.833-05:00",
+    "_raw": "{\"@t\":\"2025-10-16T14:13:57.8339402Z\",\"@mt\":\"[DocumentIndexService] Operation failed\",\"@x\":\"WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException: \\\"Object reference not set to an instance of an object.\\\"\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.Utils.HttpClientExtensions.<ReadAsJsonAsync>d__0`1.MoveNext()\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.ApiClient.<GetJsonAsync>d__5`1.MoveNext()\\r\\n   at Lighthouse1.Platform.Storage.Providers.SdkApiClient.GetShareableUrl(String objectId, DateTimeOffset expiration) in E:\\\\build\\\\src\\\\SdkApiClient.cs:line 173\",\"SourceContext\":\"Lighthouse1.Platform.Storage.Providers.DocumentIndexProvider\"}"
+});
+
 await mcp.call("triage_splunk_error", {
-    errorMessages: [
-        "NullPointerException in UserService.getUserById() at line 45",
-        "Database connection timeout in OrderService.processOrder()",
-        "Authentication failed for user session validation"
-    ],
-    repositoryName: "mycompany/user-service",
+    rawSplunkData: rawSplunkData,
+    repositoryName: "mycompany/document-service",
     commitLookbackDays: 7
 });
 
-// Quick analysis with different lookback period
+// Quick analysis with shorter lookback
 await mcp.call("triage_splunk_error", {
-    errorMessages: [
-        "API rate limit exceeded in PaymentService.charge()",
-        "Invalid JSON payload in webhook handler"
-    ],
-    repositoryName: "mycompany/payment-service",
+    rawSplunkData: rawSplunkData,
+    repositoryName: "mycompany/document-service", 
     commitLookbackDays: 3
 });
 ```
