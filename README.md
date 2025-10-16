@@ -236,21 +236,13 @@ The following tools are exposed by this MCP server:
         *   Requires Splunk environment variables to be configured (see Configuration section).
         *   If Splunk is not configured, this tool will not be available.
 
-11. **`triage_splunk_error`** (Optional - requires Splunk and GitHub configuration)
-    *   Description: Automatically analyze production errors from Splunk logs and create detailed Jira triage tickets with suspected root causes based on GitHub commit analysis.
+11. **`triage_splunk_error`** (Optional - requires GitHub configuration)
+    *   Description: Automatically analyze production errors and create detailed Jira triage tickets with suspected root causes based on GitHub commit analysis.
     *   Parameters:
-        *   `logs` (array): Array of Splunk log events to analyze. Each log should have:
-            *   `_time` (string): Timestamp of the log event (ISO format)
-            *   `message` (string): The error message content
-            *   `source` (string, optional): Source system that generated the error
-            *   `serviceName` (string, optional): Name of the service that generated the error
-            *   `environment` (string, optional): Environment where the error occurred (prod, staging, etc.)
-            *   `level` (string, optional): Log level (ERROR, WARN, etc.)
-        *   `config` (object, optional): Configuration for the triage process:
-            *   `repositoryName` (string, optional): GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')
-            *   `jiraProjectKey` (string, optional): Jira project key for creating tickets (e.g., 'PROD', 'OPS')
-            *   `commitLookbackDays` (number, optional): Number of days to look back for commits (1-30, default: 7)
-            *   `createTickets` (boolean, optional): Whether to actually create Jira tickets (false for dry-run mode, default: true)
+        *   `errorMessages` (array): Array of error message strings to analyze for triage
+        *   `repositoryName` (string, optional): GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')
+        *   `commitLookbackDays` (number, optional): Number of days to look back for commits (1-30, default: 7)
+        *   `createTickets` (boolean, optional): Whether to actually create Jira tickets (false for dry-run mode, default: true)
     *   Returns:
         *   Success message with summary of triage analysis results
     *   Features:
@@ -261,9 +253,9 @@ The following tools are exposed by this MCP server:
         *   **Comprehensive Jira Tickets**: Creates detailed tickets with error context, Splunk links, and suspected commits
         *   **Graceful Degradation**: Works even when Splunk or GitHub are not configured
     *   Notes:
-        *   Requires Splunk configuration for log analysis and state tracking
         *   Requires GitHub token for commit analysis (GITHUB_TOKEN or GITHUB_PAT)
-        *   Splunk URL is auto-detected from existing configuration
+        *   Simplified interface - just provide error messages and repository information
+        *   Automatically handles error grouping and duplicate prevention
 
 
 ## Example Usage
@@ -327,37 +319,24 @@ await mcp.call("search_splunk", {
 ```javascript
 // Analyze production errors and create Jira tickets automatically
 await mcp.call("triage_splunk_error", {
-    logs: [
-        {
-            _time: "2024-01-15T10:30:00.000Z",
-            message: "NullPointerException in UserService.getUserById() at line 45",
-            serviceName: "user-service",
-            environment: "production",
-            level: "ERROR"
-        },
-        {
-            _time: "2024-01-15T10:31:00.000Z", 
-            message: "NullPointerException in UserService.getUserById() at line 45",
-            serviceName: "user-service", 
-            environment: "production",
-            level: "ERROR"
-        }
+    errorMessages: [
+        "NullPointerException in UserService.getUserById() at line 45",
+        "Database connection timeout in OrderService.processOrder()",
+        "Authentication failed for user session validation"
     ],
-    config: {
-        repositoryName: "mycompany/user-service",
-        jiraProjectKey: "PROD",
-        commitLookbackDays: 7,
-        createTickets: true
-    }
+    repositoryName: "mycompany/user-service",
+    commitLookbackDays: 7,
+    createTickets: true
 });
 
 // Dry run mode (analyze but don't create tickets)
 await mcp.call("triage_splunk_error", {
-    logs: [...],
-    config: {
-        repositoryName: "mycompany/user-service",
-        createTickets: false // Dry run mode
-    }
+    errorMessages: [
+        "API rate limit exceeded in PaymentService.charge()",
+        "Invalid JSON payload in webhook handler"
+    ],
+    repositoryName: "mycompany/payment-service",
+    createTickets: false // Dry run mode
 });
 ```
 

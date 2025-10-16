@@ -210,20 +210,14 @@ All integrations are designed to be optional and fail gracefully, ensuring the c
 ```typescript
 // Analyze production errors automatically
 const result = await mcp.call("triage_splunk_error", {
-  logs: [
-    {
-      _time: "2024-01-15T10:30:00Z",
-      message: "Database connection timeout in OrderService.processOrder()",
-      serviceName: "order-service", 
-      environment: "production",
-      level: "ERROR"
-    }
+  errorMessages: [
+    "Database connection timeout in OrderService.processOrder()",
+    "NullPointerException in UserService.validateSession()",
+    "API rate limit exceeded in PaymentService.charge()"
   ],
-  config: {
-    repositoryName: "ecommerce/order-service",
-    jiraProjectKey: "PROD",
-    commitLookbackDays: 5
-  }
+  repositoryName: "ecommerce/order-service",
+  commitLookbackDays: 5,
+  createTickets: true
 });
 ```
 
@@ -246,9 +240,11 @@ async function createTestWithMonitoring() {
   
   // 3. Auto-triage any new errors
   if (errors.length > 0) {
+    const errorMessages = errors.map(e => e.message);
     await mcp.call("triage_splunk_error", {
-      logs: errors,
-      config: { jiraProjectKey: "PROD" }
+      errorMessages: errorMessages,
+      repositoryName: "ecommerce/order-service",
+      createTickets: true
     });
   }
 }
