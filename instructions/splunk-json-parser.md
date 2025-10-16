@@ -8,10 +8,10 @@ Here is a very detailed, numbered list of 1-point stories to implement the raw S
     -   `[x]` In `src/triage/types.ts`, define and export a `ParsedRawData` interface for the contents of the `_raw` JSON string, including fields like `@t`, `@mt`, and `@x`.
 
 2.  **Implement the Main Parser Function Signature**
-    -   `[ ]` In `src/triage/splunkParser.ts`, import the `RawSplunkEvent` interface from `./types.ts`.
-    -   `[ ]` Also, import the `TriageInput` interface from `./types.ts`, as this will be the function's return type.
-    -   `[ ]` Define and export an `async` function named `parseRawSplunkEvent(rawEvent: RawSplunkEvent): Promise<TriageInput>`.
-    -   `[ ]` Inside the function, add a `try...catch` block to handle potential parsing errors gracefully.
+    -   `[x]` In `src/triage/splunkParser.ts`, import the `RawSplunkEvent` interface from `./types.ts`.
+    -   `[x]` Also, import the `TriageInput` interface from `./types.ts`, as this will be the function's return type.
+    -   `[x]` Define and export an `async` function named `parseRawSplunkEvent(rawEvent: RawSplunkEvent): Promise<TriageInput>`.
+    -   `[x]` Inside the function, add a `try...catch` block to handle potential parsing errors gracefully.
 
 3.  **Implement Initial Raw String Parsing**
     -   `[ ]` Inside the `try` block of `parseRawSplunkEvent`, call `JSON.parse()` on the `rawEvent._raw` property.

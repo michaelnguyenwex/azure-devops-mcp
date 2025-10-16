@@ -8,9 +8,16 @@ import { RawSplunkEvent, ParsedRawData, TriageInput, StackFrame, SearchKeywords 
  */
 export async function parseRawSplunkEvent(rawEvent: RawSplunkEvent): Promise<TriageInput> {
   try {
-    // TODO: Implement parsing logic
-    throw new Error('Not implemented yet');
+    // Parse the _raw JSON string
+    const parsedRawData: ParsedRawData = JSON.parse(rawEvent._raw);
+    
+    // TODO: Implement rest of parsing logic
+    throw new Error('Parsing logic not fully implemented yet');
+    
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error('Failed to parse the _raw JSON string.');
+    }
     throw new Error(`Failed to parse raw Splunk event: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
