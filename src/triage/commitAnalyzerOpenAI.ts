@@ -62,6 +62,7 @@ The JSON object must adhere to this exact schema:
   "analysis": [
     {
       "commitHash": "string",
+      "prLink": "string (URL to the Pull Request)",
       "relevanceScore": "integer (0-100)",
       "reasoning": "string (Brief, technical reasoning for the score)",
       "rollbackRisk": "string (Enum: 'HIGH', 'MEDIUM', 'LOW')",
