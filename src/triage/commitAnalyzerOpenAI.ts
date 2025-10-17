@@ -1,20 +1,22 @@
 import { Commit, TriageInput } from './types.js';
-import OpenAI from 'openai';
+import { getOpenAIConfig } from '../configStore.js';
+
+// Type definitions for OpenAI response
+interface CommitAnalysisResult {
+  commit: Commit;
+  relevanceScore: number;
+  reasoning: string;
+  rollbackRisk?: string;
+  keyFactors?: string[];
+}
 
 /**
  * OpenAI-powered commit analyzer that uses semantic understanding
  * to identify commits related to production errors for rollback decisions.
  */
 export class OpenAICommitAnalyzer {
-  private openai: OpenAI;
-
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
-    }
-    
-    this.openai = new OpenAI({ apiKey });
+    // No constructor needed - configuration handled per request
   }
 
   /**
@@ -24,13 +26,13 @@ export class OpenAICommitAnalyzer {
   async findSuspectedCommitsWithAI(
     triageInput: TriageInput, 
     recentCommits: Commit[]
-  ): Promise<{ commit: Commit; relevanceScore: number; reasoning: string }[]> {
+  ): Promise<CommitAnalysisResult[]> {
     
     if (!recentCommits || recentCommits.length === 0) {
       return [];
     }
 
-    console.log(`🤖 Analyzing ${recentCommits.length} commits with OpenAI for rollback relevance...`);
+    console.log(`🤖 Analyzing ${recentCommits.length} commits with OpenAI...`);
 
     // Prepare the analysis prompt
     const errorContext = this.buildErrorContext(triageInput);
@@ -72,26 +74,42 @@ Respond in JSON format:
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert software engineer specializing in production error analysis and rollback decisions. Provide accurate, actionable analysis for commit relevance to production errors."
-          },
-          {
-            role: "user", 
-            content: prompt
-          }
-        ],
-        temperature: 0.1, // Low temperature for consistent analysis
-        max_tokens: 2000
+      // Get OpenAI configuration
+      const openAIConfig = await getOpenAIConfig();
+      
+      // Call OpenAI API using fetch (consistent with splunkParser approach)
+      const response = await fetch(`${openAIConfig.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIConfig.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'azure-gpt-4o-mini',
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert software engineer specializing in production error analysis and rollback decisions. Provide accurate, actionable analysis for commit relevance to production errors."
+            },
+            {
+              role: "user", 
+              content: prompt
+            }
+          ],
+          temperature: 0.1, // Low temperature for consistent analysis
+          max_tokens: 2000
+        })
       });
 
-      const analysis = JSON.parse(response.choices[0].message.content || '{}');
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      const analysis = JSON.parse(responseData.choices[0].message.content || '{}');
       
       // Map the AI analysis back to our commit objects
-      const results = analysis.analysis?.map((item: any) => {
+      const results: CommitAnalysisResult[] = analysis.analysis?.map((item: any) => {
         const commit = recentCommits.find(c => c.hash.startsWith(item.commitHash.substring(0, 7)));
         return commit ? {
           commit,
@@ -100,10 +118,10 @@ Respond in JSON format:
           rollbackRisk: item.rollbackRisk,
           keyFactors: item.keyFactors
         } : null;
-      }).filter(Boolean) || [];
+      }).filter((result: CommitAnalysisResult | null): result is CommitAnalysisResult => result !== null) || [];
 
       // Sort by relevance score
-      results.sort((a, b) => b.relevanceScore - a.relevanceScore);
+      results.sort((a: CommitAnalysisResult, b: CommitAnalysisResult) => b.relevanceScore - a.relevanceScore);
 
       console.log(`🎯 OpenAI identified ${results.length} relevant commits`);
       console.log(`📊 Summary: ${analysis.summary}`);
@@ -158,7 +176,7 @@ Context Keywords: ${triageInput.searchKeywords.context.join(', ')}`;
   private fallbackToRuleBasedAnalysis(
     triageInput: TriageInput, 
     recentCommits: Commit[]
-  ): { commit: Commit; relevanceScore: number; reasoning: string }[] {
+  ): CommitAnalysisResult[] {
     // Import and use the original rule-based logic as fallback
     return recentCommits.map(commit => ({
       commit,
@@ -172,7 +190,7 @@ Context Keywords: ${triageInput.searchKeywords.context.join(', ')}`;
  * Factory function to create analyzer based on configuration
  */
 export async function createCommitAnalyzer(useOpenAI: boolean = false): Promise<{
-  analyzeSuspectedCommits: (triageInput: TriageInput, commits: Commit[]) => Promise<any[]>
+  analyzeSuspectedCommits: (triageInput: TriageInput, commits: Commit[]) => Promise<CommitAnalysisResult[]>
 }> {
   if (useOpenAI) {
     const aiAnalyzer = new OpenAICommitAnalyzer();
