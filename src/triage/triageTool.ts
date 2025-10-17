@@ -93,7 +93,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         }
         
         if (suspectedCommits.length > 0) {
-          console.log('\n🎯 Suspected Commits (Rollback Candidates):');
+          console.log('\n🎯 Top Candidates:');
           suspectedCommits.slice(0, 5).forEach((commit, index) => {
             console.log(`\n  ${index + 1}. ${commit.hash.substring(0, 8)} - ${commit.message.split('\n')[0].substring(0, 80)}${commit.message.split('\n')[0].length > 80 ? '...' : ''}`);
             console.log(`     Author: ${commit.author}`);
@@ -104,7 +104,10 @@ export function triageSplunkErrorTool(server: McpServer) {
             }
             
             if (commit.pullRequestUrl) {
-              console.log(`     Pull Request: ${commit.pullRequestUrl}`);
+              // Extract PR number from URL for cleaner display
+              const prMatch = commit.pullRequestUrl.match(/\/pull\/(\d+)/);
+              const prNumber = prMatch ? prMatch[1] : commit.pullRequestUrl.split('/').pop();
+              console.log(`     PR: #${prNumber} (${commit.pullRequestUrl})`);
             }
             
             // Show matching analysis
@@ -119,7 +122,7 @@ export function triageSplunkErrorTool(server: McpServer) {
             }
           });
           
-          console.log(`\n📊 Rollback Risk Assessment:`);
+          console.log(`\n📊 Risk Assessment:`);
           console.log(`   • Total suspected commits: ${suspectedCommits.length}`);
           console.log(`   • Most recent suspect: ${new Date(suspectedCommits[0].date).toLocaleString()}`);
           console.log(`   • Files at risk: ${triageInput.searchKeywords.files.join(', ')}`);
@@ -128,7 +131,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         // Build detailed commit analysis for return text
         let commitAnalysisText = '';
         if (suspectedCommits.length > 0) {
-          commitAnalysisText = `\n\n**🎯 Rollback Candidates Analysis:**\n\n`;
+          commitAnalysisText = `\n\n**🎯 Top Candidates Analysis:**\n\n`;
           
           suspectedCommits.slice(0, 5).forEach((commit, index) => {
             const commitTitle = commit.message.split('\n')[0];
@@ -153,13 +156,16 @@ export function triageSplunkErrorTool(server: McpServer) {
             }
             
             if (commit.pullRequestUrl) {
-              commitAnalysisText += `• **Pull Request**: ${commit.pullRequestUrl}\n`;
+              // Extract PR number from URL for cleaner display
+              const prMatch = commit.pullRequestUrl.match(/\/pull\/(\d+)/);
+              const prNumber = prMatch ? prMatch[1] : commit.pullRequestUrl.split('/').pop();
+              commitAnalysisText += `• **PR**: #${prNumber} - ${commit.pullRequestUrl}\n`;
             }
             
             commitAnalysisText += '\n';
           });
           
-          commitAnalysisText += `**📊 Rollback Risk Assessment:**\n`;
+          commitAnalysisText += `**📊 Risk Assessment:**\n`;
           commitAnalysisText += `• **Total Suspected Commits**: ${suspectedCommits.length}\n`;
           commitAnalysisText += `• **Most Recent Suspect**: ${new Date(suspectedCommits[0].date).toLocaleString()}\n`;
           commitAnalysisText += `• **Critical Files at Risk**: ${triageInput.searchKeywords.files.join(', ')}\n`;
@@ -169,7 +175,7 @@ export function triageSplunkErrorTool(server: McpServer) {
         return {
           content: [{
             type: "text",
-            text: `✅ **Triage Analysis Completed - Rollback Decision Support**\n\n**🔍 Service Details:**\n• **Application**: ${triageInput.serviceName}\n• **Environment**: ${triageInput.environment}\n• **Exception Type**: ${triageInput.exceptionType}\n• **Error Message**: ${triageInput.errorMessage}\n\n**📋 Technical Analysis:**\n• **Stack Frames Analyzed**: ${triageInput.stackTrace.length}\n• **Key Files Involved**: ${triageInput.searchKeywords.files.join(', ')}\n• **Critical Methods**: ${triageInput.searchKeywords.methods.join(', ')}\n• **Context Keywords**: ${triageInput.searchKeywords.context.join(', ')}\n• **GitHub Commits Analyzed**: ${suspectedCommits.length > 0 ? suspectedCommits.length : 'None (no repository specified)'}${commitAnalysisText}\n\n**🚀 Next Steps for Development Team:**\n1. **Review Suspected Commits**: Start with the highest-ranked commits above\n2. **Check File Overlap**: Focus on commits that modified files in the error stack trace\n3. **Assess Risk vs. Impact**: Consider rollback for recent commits with high file overlap\n4. **Test Hypothesis**: Use commit details and PR links to understand the changes\n5. **Decision Point**: Determine if rollback is safer than forward-fix based on change complexity\n\n${suspectedCommits.length > 0 ? 'This analysis provides specific commits ranked by relevance to help make informed rollback decisions.' : 'Enable GitHub analysis by providing a repository name to get rollback recommendations.'}`
+            text: `✅ **Triage Analysis Completed**\n\n**🔍 Service Details:**\n• **Application**: ${triageInput.serviceName}\n• **Environment**: ${triageInput.environment}\n• **Exception Type**: ${triageInput.exceptionType}\n• **Error Message**: ${triageInput.errorMessage}\n\n**📋 Technical Analysis:**\n• **Stack Frames Analyzed**: ${triageInput.stackTrace.length}\n• **Key Files Involved**: ${triageInput.searchKeywords.files.join(', ')}\n• **Critical Methods**: ${triageInput.searchKeywords.methods.join(', ')}\n• **Context Keywords**: ${triageInput.searchKeywords.context.join(', ')}\n• **GitHub Commits Analyzed**: ${suspectedCommits.length > 0 ? suspectedCommits.length : 'None (no repository specified)'}${commitAnalysisText}\n\n**🚀 Next Steps for Development Team:**\n1. **Review Suspected Commits**: Start with the highest-ranked commits above\n2. **Check File Overlap**: Focus on commits that modified files in the error stack trace\n3. **Assess Risk vs. Impact**: Consider rollback for recent commits with high file overlap\n4. **Test Hypothesis**: Use commit details and PR links to understand the changes\n5. **Decision Point**: Determine if rollback is safer than forward-fix based on change complexity\n\n${suspectedCommits.length > 0 ? 'This analysis provides specific commits ranked by relevance to help make informed decisions.' : 'Enable GitHub analysis by providing a repository name to get commit recommendations.'}`
           }]
         };
         
