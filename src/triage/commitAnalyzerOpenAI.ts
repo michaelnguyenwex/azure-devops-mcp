@@ -38,7 +38,8 @@ export class OpenAICommitAnalyzer {
     const errorContext = this.buildErrorContext(triageInput);
     const commitData = this.formatCommitsForAnalysis(recentCommits);
 
-    const prompt = `You are a senior software engineer analyzing production errors for rollback decisions.
+    const prompt = `Act as an expert software engineer. Be methodical, data-driven, and concise.
+
 
 ERROR CONTEXT:
 ${errorContext}
@@ -46,31 +47,28 @@ ${errorContext}
 RECENT COMMITS TO ANALYZE:
 ${commitData}
 
-TASK: Analyze each commit and determine its likelihood of being related to this production error. Consider:
+**TASK:**
+You will be given a production error context and a list of recent commits. Analyze EACH commit against the error context using the following criteria:
+1.  **File Overlap**: Is there an overlap between files in the commit and files in the error's stack trace?
+2.  **Functional Relevance**: Are the code changes semantically related to the error's function (e.g., authentication code for an authentication error)?
+3.  **Timing**: How close was the commit to the error's first appearance?
+4.  **Change Risk**: How risky is the change (e.g., refactor, dependency change, logic overhaul)?
 
-1. **File Overlap**: Does the commit modify files mentioned in the stack trace?
-2. **Functional Relevance**: Are the changes semantically related to the error type?
-3. **Timing Risk**: How recent is the commit (more recent = higher rollback candidate)?
-4. **Change Risk**: Are these risky changes (refactors, auth changes, breaking changes)?
-5. **Error Type Match**: Does the commit relate to the specific error type (${triageInput.exceptionType})?
+**OUTPUT FORMAT:**
+You MUST respond with ONLY a single, valid JSON object. Do not include any introductory text, markdown formatting, or explanations outside of the JSON structure.
 
-For each commit, provide:
-- Relevance score (0-100, where 100 = definitely should consider for rollback)
-- Brief reasoning for the score
-- Rollback recommendation (HIGH/MEDIUM/LOW risk)
-
-Respond in JSON format:
+The JSON object must adhere to this exact schema:
 {
   "analysis": [
     {
-      "commitHash": "abc123...",
-      "relevanceScore": 85,
-      "reasoning": "Direct file overlap with DefaultController.cs and authentication-related changes",
-      "rollbackRisk": "HIGH",
-      "keyFactors": ["file_overlap", "auth_changes", "recent_timing"]
+      "commitHash": "string",
+      "relevanceScore": "integer (0-100)",
+      "reasoning": "string (Brief, technical reasoning for the score)",
+      "rollbackRisk": "string (Enum: 'HIGH', 'MEDIUM', 'LOW')",
+      "keyFactors": "array of strings (e.g., ['file_overlap', 'recent_timing'])"
     }
   ],
-  "summary": "Brief overall assessment for rollback strategy"
+  "summary": "string (A one-sentence technical summary for a rollback decision)"
 }`;
 
     try {
@@ -89,7 +87,7 @@ Respond in JSON format:
           messages: [
             {
               role: "system",
-              content: "You are an expert software engineer specializing in production error analysis and rollback decisions. Provide accurate, actionable analysis for commit relevance to production errors."
+              content: "You are a highly specialized AI functioning as a code analysis engine. Your purpose is to determine the relevance of software commits to a given production error."
             },
             {
               role: "user", 
