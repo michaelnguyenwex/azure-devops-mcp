@@ -1,25 +1,19 @@
-[
-  {
-    "@l": "Error",
-    "Application": "WexHealth.CDH.Web.Consumer",
-    "Environment": "QA",
-    "_bkt": "applogs~266~496F2014-F45D-4D40-80A1-158D36368738",
-    "_cd": "266:12012879",
-    "_indextime": "1760624056",
-    "_raw": "{\"@t\":\"2025-10-16T14:13:57.8339402Z\",\"@mt\":\"[DocumentIndexService] Operation 'Get Shareable Url' failed! Info: { documentId: 9a389cad0a89f296b66437e840248d6fa0ce12827f0501d1cc772fb610fd592d, expire: 10/17/2025 9:13:57 AM -05:00 | correlationId: 38f694d7-fb0c-497d-b34f-8b107ee8d02e, url: https://ps-docindex.qa.benefits.azr.wexglobal.com/api/v1/share?documentId=9a389cad0a89f296b66437e840248d6fa0ce12827f0501d1cc772fb610fd592d&expire=2025-10-17T09%3A13%3A57.6912169-05%3A00, method: GET, status: 500, connectionId: ad9ad082-3d5d-4bbd-a31e-b4d32f85520b }; [StackTrace]: [Assembly]:LH1OnDemand.WebApp.Participant;[File]:MasterPageBase.cs;[Method]:OnLoad(67)=>[Assembly]:LH1OnDemand.WebApp.Participant;[File]:MasterBase.cs;[Method]:OnLoad(132)=>[Assembly]:LH1OnDemand.WebApp.Participant;[File]:PortalPage.master.cs;[Method]:Page_Load(151)\",\"@l\":\"Error\",\"@x\":\"WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException: \\\"Object reference not set to an instance of an object.\\\"\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.Utils.HttpClientExtensions.<ReadAsJsonAsync>d__0`1.MoveNext()\\r\\n--- End of stack trace from previous location where exception was thrown ---\\r\\n   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\\r\\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.ApiClient.<GetJsonAsync>d__5`1.MoveNext()\\r\\n--- End of stack trace from previous location where exception was thrown ---\\r\\n   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\\r\\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApi.<GetShareableUrlAsync>d__35.MoveNext()\\r\\n--- End of stack trace from previous location where exception was thrown ---\\r\\n   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\\r\\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\\r\\n   at WEXHealth.Enterprise.DocumentIndex.SDK.Utils.AsyncHelper.RunSync[TResult](Func`1 task)\\r\\n   at Lighthouse1.Platform.Storage.Providers.SdkApiClient.GetShareableUrl(String objectId, DateTimeOffset expiration) in E:\\\\build\\\\2833\\\\s\\\\Dev\\\\src\\\\Lighthouse1\\\\Platform\\\\Gateway\\\\Lighthouse1.Platform.Gateway.Contract\\\\Providers\\\\SdkApiClient.cs:line 173\\r\\n   at Lighthouse1.Platform.Storage.Providers.DocumentIndexProvider.GetShareableUrl(String objectId, DateTimeOffset expiration) in E:\\\\build\\\\2833\\\\s\\\\Dev\\\\src\\\\Lighthouse1\\\\Platform\\\\Gateway\\\\Lighthouse1.Platform.Gateway.Contract\\\\Providers\\\\DocumentIndexProvider.cs:line 299\",\"EventId\":{\"Id\":9003},\"SourceContext\":\"Lighthouse1.Platform.Storage.Providers.DocumentIndexProvider\",\"browser\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\",\"source_user_id\":null,\"tpa\":\"\",\"source_server\":\"MEU1CDHCNWEB2Q\",\"user\":\"\",\"log4net:HostName\":\"MEU1CDHCNWEB2Q\",\"remoteip\":\"52.191.80.3\",\"sessionId\":\"z34jycthkv1zbtsm5szsj0lz\",\"dbsegment\":\"nav2\",\"MachineName\":\"MEU1CDHCNWEB2Q\",\"ThreadId\":185,\"HttpRequestClientHostIP\":\"52.191.80.3\",\"HttpRequestUrl\":\"https://cdh-consumer.qa.wexglobal.com:9013/Login.aspx\",\"HttpSessionId\":\"z34jycthkv1zbtsm5szsj0lz\",\"UserName\":\"\",\"Application\":\"WexHealth.CDH.Web.Consumer\"}",
-    "_serial": "0",
-    "_si": [
-      "idx-i-0637dc08cf86d4155.wex.splunkcloud.com",
-      "applogs"
-    ],
-    "_sourcetype": "CDH",
-    "_subsecond": ".8339402",
-    "_time": "2025-10-16T09:13:57.833-05:00",
-    "host": "MEU1SPLSMB002P",
-    "index": "applogs",
-    "linecount": "1",
-    "source": "\\\\wexprodr.wexglobal.com\\WH\\WHqa\\logs\\CDH\\splunk\\WexHealth.CDH.Web.Consumer\\applog.MEU1CDHCNWEB2Q_064.json",
-    "sourcetype": "CDH",
-    "splunk_server": "idx-i-0637dc08cf86d4155.wex.splunkcloud.com"
-  }
-]
+{
+  "@t": "2025-10-17T14:35:47.6702291Z",
+  "@mt": "Unauthenticated access",
+  "@l": "Error",
+  "@x": "System.Security.Authentication.AuthenticationException: Unauthenticated access\r\n   at WexHealth.CDH.ConsumerInvestment.UI.Portal.Controllers.DefaultController.ProcessConsumerPortalToken(String token, ClaimsPrincipal principal) in E:\\build\\3218\\s\\src\\UI\\WexHealth.CDH.ConsumerInvestment.UI.Portal\\Controllers\\DefaultController.cs:line 150\r\n   at WexHealth.CDH.ConsumerInvestment.UI.Portal.Controllers.DefaultController.ValidateTokenAndSignIn(String token) in E:\\build\\3218\\s\\src\\UI\\WexHealth.CDH.ConsumerInvestment.UI.Portal\\Controllers\\DefaultController.cs:line 76\r\n   at lambda_method129(Closure, Object)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Logged|12_1(ControllerActionInvoker invoker)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeNextResourceFilter>g__Awaited|25_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.Rethrow(ResourceExecutedContextSealed context)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Logged|17_1(ResourceInvoker invoker)\r\n   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Logged|17_1(ResourceInvoker invoker)\r\n   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)\r\n   at WexHealth.CDH.ConsumerInvestment.Security.CSP.Middleware.CspMiddleware.Invoke(HttpContext context) in E:\\build\\3218\\s\\src\\WexHealth.CDH.ConsumerInvestment.Security\\CSP\\Middleware\\CspMiddleware.cs:line 32\r\n   at WexHealth.CDH.ConsumerInvestment.Context.Enrichment.EnrichmentContextMiddleware.Invoke(HttpContext httpContext) in E:\\build\\3218\\s\\src\\WexHealth.CDH.ConsumerInvestment.Context\\Enrichment\\EnrichmentContextMiddleware.cs:line 26\r\n   at WEXHealth.Enterprise.Extensions.Host.Middleware.RequestLogScopeMiddleware.Invoke(HttpContext context)\r\n   at WexHealth.CDH.ConsumerInvestment.Navigation.ExceptionHandling.ErrorHandlerMiddleware.Invoke(HttpContext context) in E:\\build\\3218\\s\\src\\WexHealth.CDH.ConsumerInvestment.Navigation\\ExceptionHandling\\ErrorHandlerMiddleware.cs:line 32",
+  "SourceContext": "WexHealth.CDH.ConsumerInvestment.Navigation.ExceptionHandling.ErrorHandlerMiddleware",
+  "EndUserId": null,
+  "SessionId": null,
+  "UpdatedBy": null,
+  "UpdatedSource": "ConsumerInvestmentPortal",
+  "UserId": "WexHealth.CDH.ConsumerInvestment.Portal\\MEU1WBINVEST2Q",
+  "UserTxId": "20f6d8dc-a44c-49fd-b9b0-af523fc746b5",
+  "UpdatedDate": null,
+  "RequestId": "800001da-0000-eb00-b63f-84710c7967bb",
+  "RequestPath": "/default/validatetokenandsignin",
+  "MachineName": "MEU1WBINVEST2Q",
+  "ThreadId": 81,
+  "Application": "WexHealth.CDH.ConsumerInvestment.Portal"
+}

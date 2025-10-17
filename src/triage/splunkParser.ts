@@ -1,4 +1,5 @@
 import { RawSplunkEvent, ParsedRawData, TriageInput, StackFrame, SearchKeywords } from './types.js';
+import { getOpenAIConfig } from '../configStore.js';
 
 /**
  * Parses a raw Splunk JSON string into a structured TriageInput object.
@@ -151,5 +152,172 @@ export async function parseRawSplunkEvent(rawSplunkJson: string): Promise<Triage
       throw new Error('Failed to parse the _raw JSON string.');
     }
     throw new Error(`Failed to parse raw Splunk event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Parses a raw Splunk JSON string into a structured TriageInput object using OpenAI API.
+ * 
+ * @param rawSplunkJson - The raw Splunk JSON string to parse
+ * @returns A structured TriageInput object ready for triage processing
+ */
+export async function parseRawSplunkEventWithOpenAI(rawSplunkJson: string): Promise<TriageInput> {
+  try {
+    // Get OpenAI configuration
+    const openAIConfig = await getOpenAIConfig();
+    
+    // Create the prompt by replacing {{inputText}} with the actual input
+    const promptTemplate = `Your task is to act as a data extraction and transformation engine. You will be given a raw JSON log entry, denoted as \`<inputText>\`. Your goal is to parse this log, extract specific pieces of information from its nested fields, and structure them into a clean, new JSON object, denoted as \`<jsonOutput>\`.
+
+> Follow these extraction and mapping rules precisely.
+
+## Extraction and Mapping Rules
+
+1.  **Parse the \`_raw\` field**: The core information is located within the \`_raw\` field of the \`<inputText>\`. This field is a JSON string that must be parsed first.
+2.  **Map top-level fields**:
+     * \`serviceName\`: Extract from the \`Application\` field.
+     * \`environment\`: Extract from the \`Environment\` field.
+3.  **Extract from the parsed \`_raw\` content**:
+     * \`timestamp\`: Extract the value from the \`@t\` field.
+     * \`exceptionType\`: From the \`@x\` field, this is the exception name that appears before the first colon (e.g., \`WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException\`).
+     * \`errorMessage\`: From the \`@x\` field, this is the descriptive message inside the first set of escaped double quotes (\`\"...\"\`) that follows the \`exceptionType\`.
+     * \`stackTrace\`:
+         * Parse the stack trace details from the \`@x\` field.
+         * Create an array of objects for stack frames that include a file path.
+         * For each frame, extract the \`file\` name (e.g., \`SdkApiClient.cs\`), the \`method\` name, and the \`line\` number. If a line number is not available, set it to \`null\`.
+     * \`searchKeywords\`:
+         * \`files\`: Create an array of unique \`file\` names found in the stack trace.
+         * \`methods\`: Create an array of unique \`method\` names found in the stack trace.
+         * \`context\`: Create an array of relevant contextual keywords, including the \`exceptionType\`, the \`SourceContext\`, and any other significant service names mentioned (e.g., \`DocumentIndexService\`).
+
+**Now, using these rules, transform the following \`<inputText>\` into the corresponding \`<jsonOutput>\`.**
+
+### \`<inputText>\`
+{{inputText}}
+
+### \`<jsonOutput>\`
+
+\`\`\`json
+{
+  "serviceName": "WexHealth.CDH.Web.Consumer",
+  "environment": "QA",
+  "timestamp": "2025-10-16T14:13:57.833Z",
+  "errorMessage": "Object reference not set to an instance of an object.",
+  "exceptionType": "WEXHealth.Enterprise.DocumentIndex.SDK.DocumentIndexApiException",
+  "stackTrace": [
+    {
+      "file": "SdkApiClient.cs",
+      "method": "ReadAsJsonAsync",
+      "line": null
+    },
+    {
+      "file": "ApiClient.cs",
+      "method": "GetJsonAsync",
+      "line": null
+    },
+    {
+      "file": "DocumentIndexApi.cs",
+      "method": "GetShareableUrlAsync",
+      "line": null
+    },
+    {
+      "file": "SdkApiClient.cs",
+      "method": "GetShareableUrl",
+      "line": 173
+    },
+    {
+      "file": "DocumentIndexProvider.cs",
+      "method": "GetShareableUrl",
+      "line": 299
+    }
+  ],
+  "searchKeywords": {
+    "files": [
+      "SdkApiClient.cs",
+      "DocumentIndexProvider.cs",
+      "ApiClient.cs",
+      "DocumentIndexApi.cs"
+    ],
+    "methods": [
+      "GetShareableUrl",
+      "GetShareableUrlAsync",
+      "ReadAsJsonAsync",
+      "GetJsonAsync"
+    ],
+    "context": [
+      "DocumentIndexApiException",
+      "DocumentIndexProvider",
+      "DocumentIndexService"
+    ]
+  }
+}
+\`\`\`
+
+Please return only the JSON object without any code blocks or additional text.`;
+
+    const prompt = promptTemplate.replace('{{inputText}}', rawSplunkJson);
+    
+    // Call OpenAI API
+    const response = await fetch(`${openAIConfig.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIConfig.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'azure-gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 2000
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const openAIResponse = await response.json();
+    
+    if (!openAIResponse.choices || openAIResponse.choices.length === 0) {
+      throw new Error('No response from OpenAI API');
+    }
+
+    const content = openAIResponse.choices[0].message.content;
+    
+    // Parse the JSON response from OpenAI
+    let parsedResult;
+    try {
+      // Try to extract JSON from the response in case it's wrapped in code blocks
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      parsedResult = JSON.parse(jsonString);
+    } catch (parseError) {
+      throw new Error(`Failed to parse OpenAI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+
+    // Convert the parsed result to TriageInput format
+    const triageInput: TriageInput = {
+      serviceName: parsedResult.serviceName || '',
+      environment: parsedResult.environment || '',
+      timestamp: parsedResult.timestamp || new Date().toISOString(),
+      errorMessage: parsedResult.errorMessage || '',
+      exceptionType: parsedResult.exceptionType || '',
+      stackTrace: parsedResult.stackTrace || [],
+      searchKeywords: {
+        files: parsedResult.searchKeywords?.files || [],
+        methods: parsedResult.searchKeywords?.methods || [],
+        context: parsedResult.searchKeywords?.context || []
+      }
+    };
+
+    return triageInput;
+    
+  } catch (error) {
+    throw new Error(`Failed to parse raw Splunk event with OpenAI: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

@@ -20,6 +20,14 @@ export const SplunkConfigSchema = z.object({
 
 export type SplunkConfig = z.infer<typeof SplunkConfigSchema>;
 
+// Zod schema for OpenAI configuration validation
+export const OpenAIConfigSchema = z.object({
+  apiKey: z.string().min(1, "OpenAI API key cannot be empty."),
+  baseUrl: z.string().min(1, "OpenAI API base URL cannot be empty."),
+});
+
+export type OpenAIConfig = z.infer<typeof OpenAIConfigSchema>;
+
 // Jira API base URL - getter function to ensure it's accessed at runtime
 export function getJiraApiBaseUrl(): string {
   const baseUrl = process.env.JIRA_API_BASE_URL;
@@ -118,4 +126,29 @@ export async function getSplunkConfig(): Promise<SplunkConfig> {
 
   // Validate using Zod schema
   return SplunkConfigSchema.parse(config);
+}
+
+/**
+ * Retrieves the OpenAI configuration from environment variables.
+ * @returns A promise that resolves to the OpenAIConfig object.
+ * @throws An error if the environment variables are not set, are empty, or fail validation.
+ */
+export async function getOpenAIConfig(): Promise<OpenAIConfig> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  const baseUrl = process.env.OPENAI_API_BASE_URL;
+
+  if (!apiKey) {
+    throw new Error("OpenAI API key environment variable 'OPENAI_API_KEY' is not set or is empty.");
+  }
+  if (!baseUrl) {
+    throw new Error("OpenAI API base URL environment variable 'OPENAI_API_BASE_URL' is not set or is empty.");
+  }
+
+  const config: OpenAIConfig = {
+    apiKey,
+    baseUrl
+  };
+
+  // Validate using Zod schema
+  return OpenAIConfigSchema.parse(config);
 }

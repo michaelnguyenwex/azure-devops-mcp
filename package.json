@@ -11,7 +11,9 @@
     "test:splunk-parser": "npm run build && node build/triage/test-splunk-parser.js",
     "test:triage-simple": "npm run build && node build/triage/test-simple.js",
     "test:github": "npm run build && node build/triage/test-github.js",
-    "test:splunk-triage": "npm run build && node build/triage/test-splunk-triage.js"
+    "test:splunk-triage": "npm run build && node build/triage/test-splunk-triage.js",
+    "test:openai-splunk": "npm run build && node build/triage/test-openai-splunk-parser.js",
+    "test:triage-openai": "npm run build && node build/triage/test-triage-openai.js"
   },
   "bin": {
     "azdo-mcp": "./build/index.js"

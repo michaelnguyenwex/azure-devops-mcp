@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { parseRawSplunkEvent } from './splunkParser.js';
+import { parseRawSplunkEvent, parseRawSplunkEventWithOpenAI } from './splunkParser.js';
 import { findSuspectedCommits } from './commitAnalyzer.js';
 import { GitHubService } from './githubService.js';
 import { RawSplunkEvent, TriageInput, Commit } from './types.js';
@@ -8,7 +8,7 @@ import { RawSplunkEvent, TriageInput, Commit } from './types.js';
 /**
  * Registers the triage Splunk error tool with the MCP server.
  * 
- * This tool parses raw Splunk JSON data, extracts error information and stack traces,
+ * This tool uses OpenAI to parse raw Splunk JSON data, extracts error information and stack traces,
  * then analyzes GitHub commits to identify potential root causes.
  * This is an analysis-only tool that does not create tickets.
  * 
@@ -17,7 +17,7 @@ import { RawSplunkEvent, TriageInput, Commit } from './types.js';
 export function triageSplunkErrorTool(server: McpServer) {
   server.tool(
     "triage_splunk_error",
-    "Parse raw Splunk JSON data and analyze GitHub commits to identify suspected root causes for production errors",
+    "Use OpenAI to parse raw Splunk JSON data and analyze GitHub commits to identify suspected root causes for production errors",
     {
       rawSplunkData: z.string().describe("Raw Splunk JSON string containing error details and stack trace"),
       repositoryName: z.string().describe("GitHub repository name in format 'owner/repo' (e.g., 'company/service-repo')"),
@@ -25,11 +25,11 @@ export function triageSplunkErrorTool(server: McpServer) {
     },
     async ({ rawSplunkData, repositoryName, commitLookbackDays }) => {
       try {
-        console.log(`\n🔍 Starting automated error triage with Splunk data parsing`);
+        console.log(`\n🔍 Starting automated error triage with OpenAI-powered Splunk data parsing`);
         
-        // Step 1: Parse the raw Splunk JSON data and extract structured triage input
-        console.log('📋 Step 1: Parsing raw Splunk data and extracting error information...');
-        const triageInput: TriageInput = await parseRawSplunkEvent(rawSplunkData);
+        // Step 1: Parse the raw Splunk JSON data and extract structured triage input using OpenAI
+        console.log('📋 Step 1: Parsing raw Splunk data and extracting error information with OpenAI...');
+        const triageInput: TriageInput = await parseRawSplunkEventWithOpenAI(rawSplunkData);
         
         console.log('✅ Parsed error details:', {
           serviceName: triageInput.serviceName,

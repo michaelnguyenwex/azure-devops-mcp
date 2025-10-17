@@ -11,7 +11,7 @@
  */
 
 import 'dotenv/config';  // Load environment variables from .env file
-import { parseRawSplunkEvent } from './splunkParser.js';
+import { parseRawSplunkEvent, parseRawSplunkEventWithOpenAI } from './splunkParser.js';
 import { findSuspectedCommits } from './commitAnalyzer.js';
 import { GitHubService } from './githubService.js';
 import { TriageInput, Commit } from './types.js';
@@ -49,9 +49,9 @@ async function testTriageSplunkErrorTool(
   try {
     console.log(`\n🔍 Starting automated error triage with Splunk data parsing`);
     
-    // Step 1: Parse the raw Splunk JSON data and extract structured triage input
-    console.log('📋 Step 1: Parsing raw Splunk data and extracting error information...');
-    const triageInput: TriageInput = await parseRawSplunkEvent(rawSplunkData);
+    // Step 1: Parse the raw Splunk JSON data and extract structured triage input using OpenAI
+    console.log('📋 Step 1: Parsing raw Splunk data and extracting error information with OpenAI...');
+    const triageInput: TriageInput = await parseRawSplunkEventWithOpenAI(rawSplunkData);
     
     console.log('✅ Parsed error details:', {
       serviceName: triageInput.serviceName,
