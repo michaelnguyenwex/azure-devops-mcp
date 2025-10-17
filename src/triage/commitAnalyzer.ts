@@ -120,7 +120,7 @@ function extractKeywordsFromError(errorMessage: string): string[] {
 
 /**
  * Calculates a relevance score for a commit based on how well it matches
- * the extracted keywords and error context.
+ * the extracted keywords and error context. Enhanced for rollback decision support.
  * 
  * @param commit - The commit to analyze
  * @param keywords - Keywords extracted from the error message
@@ -132,27 +132,80 @@ function calculateRelevanceScore(commit: Commit, keywords: string[], errorMessag
   const commitText = `${commit.message} ${commit.changedFiles?.join(' ') || ''}`.toLowerCase();
   const errorLower = errorMessage.toLowerCase();
 
-  // High-value matches in commit message
+  // CRITICAL: Exact file name matches (highest priority for rollback)
+  if (commit.changedFiles) {
+    for (const file of commit.changedFiles) {
+      const fileName = file.toLowerCase();
+      
+      // Extract file names from keywords and check for exact or partial matches
+      for (const keyword of keywords) {
+        const keywordLower = keyword.toLowerCase();
+        
+        // Exact file name match (without extension)
+        if (keywordLower.endsWith('.cs') || keywordLower.endsWith('.js') || keywordLower.endsWith('.ts')) {
+          const keywordFileName = keywordLower.split('/').pop()?.replace(/\.(cs|js|ts)$/, '') || keywordLower;
+          const commitFileName = fileName.split('/').pop()?.replace(/\.(cs|js|ts)$/, '') || fileName;
+          
+          if (commitFileName === keywordFileName) {
+            score += 50; // VERY HIGH score for exact file match
+          } else if (commitFileName.includes(keywordFileName) || keywordFileName.includes(commitFileName)) {
+            score += 30; // HIGH score for partial file match
+          }
+        }
+        
+        // Class/Controller name matches
+        if (fileName.includes(keywordLower)) {
+          score += 25; // HIGH score for file path containing keyword
+        }
+      }
+    }
+  }
+
+  // HIGH: Method name matches in commit message (good rollback indicator)
   for (const keyword of keywords) {
     const keywordLower = keyword.toLowerCase();
     
     if (commit.message.toLowerCase().includes(keywordLower)) {
-      score += 10; // High score for keyword in commit message
+      // Check if it's likely a method name (CamelCase or contains parentheses)
+      if (/^[a-z][a-zA-Z0-9]*[A-Z]/.test(keyword) || keyword.includes('(')) {
+        score += 20; // HIGH score for method names in commit message
+      } else {
+        score += 10; // Medium score for other keywords
+      }
       
-      // Extra points if it's in the commit title (first line)
+      // Extra bonus if it's in the commit title (first line)
       const commitTitle = commit.message.split('\n')[0].toLowerCase();
       if (commitTitle.includes(keywordLower)) {
-        score += 5;
+        score += 8;
       }
     }
+  }
 
-    // Medium-value matches in changed files
-    if (commit.changedFiles) {
-      for (const file of commit.changedFiles) {
-        if (file.toLowerCase().includes(keywordLower)) {
-          score += 5; // Medium score for keyword in file path
-        }
-      }
+  // ENHANCED: Context-aware scoring based on error type
+  const errorType = extractErrorType(errorMessage);
+  const contextualKeywords = getContextualKeywords(errorType);
+  
+  for (const contextKeyword of contextualKeywords) {
+    if (commitText.includes(contextKeyword.toLowerCase())) {
+      score += 15; // HIGH score for context-relevant terms
+    }
+  }
+
+  // ENHANCED: Look for risky change patterns in commit messages (rollback candidates)
+  const riskyPatterns = [
+    /\brefactor(ed|ing)?\b/i,
+    /\brewrite\b/i,
+    /\bmajor\s+change/i,
+    /\bbreaking\s+change/i,
+    /\bauth(entication|orization)\b/i,
+    /\bsecurity\b/i,
+    /\bmiddleware\b/i,
+    /\bpipeline\b/i
+  ];
+
+  for (const pattern of riskyPatterns) {
+    if (pattern.test(commit.message)) {
+      score += 12; // HIGH bonus for potentially risky changes
     }
   }
 
@@ -169,7 +222,7 @@ function calculateRelevanceScore(commit: Commit, keywords: string[], errorMessag
 
   for (const pattern of fixPatterns) {
     if (pattern.test(commit.message)) {
-      score += 3; // Bonus for commits that look like fixes
+      score += 8; // Medium bonus for commits that look like fixes
     }
   }
 
@@ -177,19 +230,56 @@ function calculateRelevanceScore(commit: Commit, keywords: string[], errorMessag
   const errorTerms = ['error', 'exception', 'fail', 'bug', 'issue', 'problem', 'crash'];
   for (const term of errorTerms) {
     if (commitText.includes(term) && errorLower.includes(term)) {
-      score += 4;
+      score += 6;
     }
   }
 
-  // Recent commits get slight priority
+  // ENHANCED: Recent commits get higher priority for rollback consideration
   const commitAge = Date.now() - new Date(commit.date).getTime();
   const daysSinceCommit = commitAge / (1000 * 60 * 60 * 24);
   
   if (daysSinceCommit <= 1) {
-    score += 2; // Very recent commits
+    score += 10; // Very recent commits (prime rollback candidates)
+  } else if (daysSinceCommit <= 3) {
+    score += 6; // Recent commits  
   } else if (daysSinceCommit <= 7) {
-    score += 1; // Recent commits
+    score += 3; // Week-old commits
   }
 
   return score;
+}
+
+/**
+ * Extracts the error type from the error message to help with contextual scoring
+ */
+function extractErrorType(errorMessage: string): string {
+  const authPatterns = /authentication|authorization|auth|unauthorized|unauthenticated|access.*denied/i;
+  const nullPatterns = /null.*reference|null.*pointer|nullpointer|object.*null/i;
+  const connectionPatterns = /connection|timeout|network|socket|http/i;
+  const validationPatterns = /validation|invalid|format|parse|convert/i;
+  
+  if (authPatterns.test(errorMessage)) return 'authentication';
+  if (nullPatterns.test(errorMessage)) return 'null_reference';
+  if (connectionPatterns.test(errorMessage)) return 'connection';
+  if (validationPatterns.test(errorMessage)) return 'validation';
+  
+  return 'general';
+}
+
+/**
+ * Gets contextual keywords based on error type for better matching
+ */
+function getContextualKeywords(errorType: string): string[] {
+  switch (errorType) {
+    case 'authentication':
+      return ['auth', 'login', 'token', 'jwt', 'oauth', 'security', 'middleware', 'claims', 'principal', 'signin', 'signout'];
+    case 'null_reference':  
+      return ['null', 'check', 'validation', 'guard', 'defensive', 'nullable'];
+    case 'connection':
+      return ['http', 'client', 'timeout', 'retry', 'connection', 'network', 'api'];
+    case 'validation':
+      return ['validate', 'parse', 'convert', 'format', 'check', 'model', 'binding'];
+    default:
+      return ['error', 'exception', 'handle', 'try', 'catch'];
+  }
 }
