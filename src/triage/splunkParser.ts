@@ -39,10 +39,10 @@ export async function parseRawSplunkEvent(rawSplunkJson: string): Promise<Triage
     const colonIndex = firstLine.indexOf(':');
     
     if (colonIndex !== -1) {
-      triageInput.exceptionType = firstLine.substring(0, colonIndex).trim();
+      triageInput.exceptionType = firstLine.substring(0, colonIndex).trim().split('(')[0].trim();
       const rawErrorMessage = firstLine.substring(colonIndex + 1).trim();
-      // Remove surrounding quotes if present
-      triageInput.errorMessage = rawErrorMessage.replace(/^["']|["']$/g, '');
+      // Remove surrounding quotes if present and trailing characters like '--->'
+      triageInput.errorMessage = rawErrorMessage.replace(/^["']|["']$/g, '').replace(/\s*--->\s*$/, '').trim();
     } else {
       // Fallback if no colon found
       triageInput.exceptionType = firstLine.trim();
@@ -51,8 +51,8 @@ export async function parseRawSplunkEvent(rawSplunkJson: string): Promise<Triage
     
     // Parse stack trace from @x exception field (reuse exceptionLines already declared above)
     
-    // Regex to parse .NET stack trace format: "at ClassName.MethodName(...) in filepath:line lineNumber"
-    const stackFrameRegex = /at\s+.*?\.(?<method>[^.(]+)(?:\([^)]*\))?\s+in\s+.*?[\\\/](?<file>[^\\\/\s]+):line\s+(?<line>\d+)/;
+    // This more general regex handles lines with or without a leading "at" and captures the essential parts.
+    const stackFrameRegex = /(?:at\s+)?(?:[^\s]+\.)?(?<method>[^\s(]+)\s*\(.*?\)\s+in\s+.*?[\\/](?<file>[^\\/:]+):line\s+(?<line>\d+)/;
     // Regex for frames without line numbers but with clear method names
     const stackFrameNoLineRegex = /at\s+.*?\.(?<method>[^.(]+)(?:\([^)]*\))?$/;
     

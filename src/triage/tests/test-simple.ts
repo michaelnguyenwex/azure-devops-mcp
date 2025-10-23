@@ -5,8 +5,8 @@
  */
 
 import 'dotenv/config';  // Load environment variables from .env file
-import { runTriage, TriageConfig } from './triageWorkflow.js';
-import { SplunkLogEvent } from './types.js';
+import { runTriage, TriageConfig } from '../triageWorkflow.js';
+import { SplunkLogEvent } from '../types.js';
 
 /**
  * Create simple test data for quick testing

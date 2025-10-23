@@ -11,10 +11,10 @@
  */
 
 import 'dotenv/config';  // Load environment variables from .env file
-import { parseRawSplunkEvent, parseRawSplunkEventWithOpenAI } from './splunkParser.js';
-import { findSuspectedCommits } from './commitAnalyzer.js';
-import { GitHubService } from './githubService.js';
-import { TriageInput, Commit } from './types.js';
+import { parseRawSplunkEvent, parseRawSplunkEventWithOpenAI } from '../splunkParser.js';
+import { findSuspectedCommits } from '../commitAnalyzer.js';
+import { GitHubService } from '../githubService.js';
+import { TriageInput, Commit } from '../types.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';

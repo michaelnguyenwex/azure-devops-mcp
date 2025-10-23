@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { parseRawSplunkEvent, parseRawSplunkEventWithOpenAI } from './splunkParser.js';
+import { parseRawSplunkEvent, parseRawSplunkEventWithOpenAI } from '../splunkParser.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';

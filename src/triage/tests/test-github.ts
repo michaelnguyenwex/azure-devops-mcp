@@ -11,7 +11,7 @@
  */
 
 import 'dotenv/config';  // Load environment variables from .env file
-import { GitHubService } from './githubService.js';
+import { GitHubService } from '../githubService.js';
 
 /**
  * Test GitHub service functionality
@@ -128,7 +128,7 @@ async function testGitHubService() {
     ];
     
     // Test commit analysis
-    const { findSuspectedCommits } = await import('./commitAnalyzer.js');
+    const { findSuspectedCommits } = await import('../commitAnalyzer.js');
     const testErrorMessage = 'NullPointerException in UserService.getUserById()';
     
     console.log(`Analyzing commits for error: "${testErrorMessage}"`);

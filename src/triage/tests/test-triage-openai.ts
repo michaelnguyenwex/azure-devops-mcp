@@ -44,7 +44,7 @@ async function testOpenAITriageTool() {
     console.log('- Raw data size:', rawSplunkJson.length, 'characters\n');
 
     // Import the OpenAI parser function
-    const { parseRawSplunkEventWithOpenAI } = await import('./splunkParser.js');
+    const { parseRawSplunkEventWithOpenAI } = await import('../splunkParser.js');
 
     // Test parsing with OpenAI
     console.log('🔍 Parsing with OpenAI...');

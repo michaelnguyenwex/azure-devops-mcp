@@ -1,0 +1,51 @@
+System.Web.HttpUnhandledException (0x80004005): Exception of type 'System.Web.HttpUnhandledException' was thrown. --->
+System.Exception: Unable to cast to targetType ContentContainer: There is an error in
+XML document (1, 527). --->
+System.InvalidOperationException: There is an error in
+XML document (1, 527). --->
+System.InvalidOperationException: The specified type was not recognized: name='HsaStoreIntegrationDisplayCondition', namespace='', at
+<Content xmlns=''>. at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read120_Content(Boolean isNullable, Boolean checkType) at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read2_DisplayConditionContainer(Boolean isNullable, Boolean checkType) at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read35_BannerContentItem(Boolean isNullable, Boolean checkType) at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read120_Content(Boolean isNullable, Boolean checkType) at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read29_BannerContentContainer(Boolean isNullable, Boolean checkType) at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read120_Content(Boolean isNullable, Boolean checkType) at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read121_ContentContainer(Boolean isNullable, Boolean checkType) at
+Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializationReaderContentContainer.Read122_ContentContainer() --- End of inner exception stack trace --- at
+System.Xml.Serialization.XmlSerializer.Deserialize(XmlReader xmlReader, String encodingStyle, XmlDeserializationEvents events) at
+System.Xml.Serialization.XmlSerializer.Deserialize(XmlReader xmlReader) at
+Lighthouse1.LH1OnDemand.Utility.Common.SerializationHelper.Deserialize(String xmlString, XmlSchema xmlSchema, Type targetType, Encoding encoding) in
+E:\build\2833\s\Dev\Source\Code\Core.LH1OnDemand.Utility\Common\SerializationHelper.cs:line 98 --- End of inner exception stack trace --- at
+Lighthouse1.LH1OnDemand.Utility.Common.SerializationHelper.Deserialize(String xmlString, XmlSchema xmlSchema, Type targetType, Encoding encoding) in
+E:\build\2833\s\Dev\Source\Code\Core.LH1OnDemand.Utility\Common\SerializationHelper.cs:line 102 at
+Lighthouse1.LH1OnDemand.Utility.Common.SerializationHelper.Deserialize(String xmlString, XmlSchema xmlSchema, Type targetType) in
+E:\build\2833\s\Dev\Source\Code\Core.LH1OnDemand.Utility\Common\SerializationHelper.cs:line 65 at
+Lighthouse1.LH1OnDemand.Utility.Common.SerializationHelper.Deserialize(String xmlString, Type targetType) in
+E:\build\2833\s\Dev\Source\Code\Core.LH1OnDemand.Utility\Common\SerializationHelper.cs:line 42 at
+Lighthouse1.CustomContent.Data.CustomContentRepository.GetCustomContentTree(Nullable1 businessPartyId, Nullable1 adminId, Nullable1 employerId, ContentTreeType type, Boolean published, Boolean getTreeHierarchically, Boolean useCache, Boolean handleAtmosExceptions, Nullable1 custodianId) in
+E:\build\2833\s\Dev\src\Lighthouse1\CustomContent\Lighthouse1.CustomContent.Data\CustomContentRepository.cs:line 469 at
+Lighthouse1.Presenters.Web.Participant.Presenters.Home.HomePresenter.get_ContentTree() in
+E:\build\2833\s\Dev\Source\Code\Lighthouse1.Presenters.Web.Participant\Presenters\Home\HomePresenter.cs:line 70 at
+Lighthouse1.Presenters.Web.Participant.Presenters.Home.HomePresenter.InitCustomSection() in
+E:\build\2833\s\Dev\Source\Code\Lighthouse1.Presenters.Web.Participant\Presenters\Home\HomePresenter.cs:line 149 at
+Lighthouse1.Presenters.Web.Participant.Presenters.Home.HomePresenter.InternalInitView(Boolean isPostBack) in
+E:\build\2833\s\Dev\Source\Code\Lighthouse1.Presenters.Web.Participant\Presenters\Home\HomePresenter.cs:line 79 at
+Lighthouse1.Presenters.Common.ViewPresenterBase`1.InitView(Boolean isPostBack) in
+E:\build\2833\s\Dev\Source\Code\Lighthouse1.Presenters.Common\ViewPresenterBase.cs:line 64 at
+LH1OnDemand.WebApp.Participant.Main.LoadEvent(Object sender, EventArgs e) in
+E:\build\2833\s\Dev\Source\Code\LH1OnDemand.WebApp.Participant\Main.aspx.cs:line 69 at
+LH1OnDemand.WebApp.Participant.PageBase.Page_Load(Object sender, EventArgs e) in
+E:\build\2833\s\Dev\Source\Code\LH1OnDemand.WebApp.Participant\PageBase.cs:line 225 at
+System.Web.UI.Control.OnLoad(EventArgs e) at
+System.Web.UI.Control.LoadRecursive() at
+System.Web.UI.Page.ProcessRequestMain(Boolean includeStagesBeforeAsyncPoint, Boolean includeStagesAfterAsyncPoint) at
+System.Web.UI.Page.HandleError(Exception e) at
+System.Web.UI.Page.ProcessRequestMain(Boolean includeStagesBeforeAsyncPoint, Boolean includeStagesAfterAsyncPoint) at
+System.Web.UI.Page.ProcessRequest(Boolean includeStagesBeforeAsyncPoint, Boolean includeStagesAfterAsyncPoint) at
+System.Web.UI.Page.ProcessRequest() at
+System.Web.UI.Page.ProcessRequest(HttpContext context) at
+System.Web.HttpApplication.CallHandlerExecutionStep.System.Web.HttpApplication.IExecutionStep.Execute() at
+System.Web.HttpApplication.<>c__DisplayClass285_0.<ExecuteStepImpl>b__0() at
+System.Web.HttpApplication.ExecuteStepImpl(IExecutionStep step) at
+System.Web.HttpApplication.ExecuteStep(IExecutionStep step, Boolean& completedSynchronously)

@@ -11,10 +11,10 @@
  */
 
 import 'dotenv/config';
-import { parseRawSplunkEvent } from './splunkParser.js';
-import { findSuspectedCommits } from './commitAnalyzer.js';
-import { GitHubService } from './githubService.js';
-import { RawSplunkEvent } from './types.js';
+import { parseRawSplunkEvent } from '../splunkParser.js';
+import { findSuspectedCommits } from '../commitAnalyzer.js';
+import { GitHubService } from '../githubService.js';
+import { RawSplunkEvent } from '../types.js';
 
 /**
  * Sample raw Splunk data for testing (as JSON string)

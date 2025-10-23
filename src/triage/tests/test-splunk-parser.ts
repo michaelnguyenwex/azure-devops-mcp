@@ -1,7 +1,8 @@
-import { parseRawSplunkEvent } from './splunkParser.js';
-import { RawSplunkEvent } from './types.js';
+import { parseRawSplunkEventWithOpenAI } from '../splunkParser.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
 /**
  * Test script to validate the Splunk parser implementation
@@ -31,8 +32,8 @@ async function testSplunkParser() {
     const rawEventJson = JSON.stringify(firstEvent);
 
     // Parse the event
-    console.log('Parsing raw event...');
-    const parsedResult = await parseRawSplunkEvent(rawEventJson);
+    console.log('Parsing raw event with OpenAI...');
+    const parsedResult = await parseRawSplunkEventWithOpenAI(rawEventJson);
 
     // Display results
     console.log('\n=== PARSED RESULT ===');
@@ -143,12 +144,18 @@ async function testSplunkParser() {
 
   } catch (error) {
     console.error('Test failed:', error);
+    if (error instanceof Error && error.message.includes('OPENAI_API_KEY')) {
+      console.log('\n💡 To run this test, ensure your .env file in the project root contains:');
+      console.log('   OPENAI_API_KEY=your-api-key');
+      console.log('   OPENAI_API_BASE_URL=https://api.openai.com/v1');
+    }
     process.exit(1);
   }
 }
 
 // Run the test if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+const __filename = fileURLToPath(import.meta.url);
+if (path.resolve(process.argv[1]) === __filename) {
   testSplunkParser().catch(console.error);
 }
 
