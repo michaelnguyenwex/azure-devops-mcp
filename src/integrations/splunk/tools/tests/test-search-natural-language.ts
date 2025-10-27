@@ -24,14 +24,28 @@ const __dirname = dirname(__filename);
 const projectRoot = resolve(__dirname, '../../../../../');
 
 // Load .env file explicitly from project root
-const envResult = dotenv.config({ path: resolve(projectRoot, '.env') });
+const envPath = resolve(projectRoot, '.env');
+console.log('🔍 Attempting to load .env from:', envPath);
+console.log('   Project root:', projectRoot);
+console.log('   Current working directory:', process.cwd());
+
+const envResult = dotenv.config({ path: envPath });
 
 if (envResult.error) {
-  console.warn('⚠️  Warning: Could not load .env file:', envResult.error.message);
-  console.warn('   Attempting to use existing environment variables...\n');
+  console.error('❌ Error loading .env file:', envResult.error.message);
+  console.error('   Please ensure .env file exists at:', envPath);
+  console.error('   Or set environment variables directly\n');
 } else {
-  console.log('✅ Loaded .env file from:', resolve(projectRoot, '.env'));
-  console.log('   Environment variables loaded successfully\n');
+  console.log('✅ Successfully loaded .env file\n');
+  console.log('📋 Checking loaded environment variables:');
+  console.log(`   SPLUNK_HOST: ${process.env.SPLUNK_HOST || 'NOT SET'}`);
+  console.log(`   SPLUNK_PORT: ${process.env.SPLUNK_PORT || 'NOT SET'}`);
+  console.log(`   SPLUNK_TOKEN: ${process.env.SPLUNK_TOKEN ? '***' + process.env.SPLUNK_TOKEN.slice(-4) : 'NOT SET'}`);
+  console.log(`   SPLUNK_SCHEME: ${process.env.SPLUNK_SCHEME || 'NOT SET'}`);
+  console.log(`   SPLUNK_VERIFY_SSL: ${process.env.SPLUNK_VERIFY_SSL || 'NOT SET'}`);
+  console.log(`   OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '***' + process.env.OPENAI_API_KEY.slice(-4) : 'NOT SET'}`);
+  console.log(`   OPENAI_API_BASE_URL: ${process.env.OPENAI_API_BASE_URL || 'NOT SET'}`);
+  console.log('');
 }
 
 // Use dynamic imports to ensure they load AFTER dotenv configuration
