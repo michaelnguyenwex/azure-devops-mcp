@@ -1,0 +1,159 @@
+{
+  "description": "Concise Splunk SPL query examples organized by pattern and use case",
+  "examples": [
+    {
+      "category": "Basic Search",
+      "description": "Simple index searches with field filters",
+      "queries": [
+        {
+          "pattern": "Search specific index by host",
+          "spl": "index=iislogs host=EP11CS1WBS13"
+        },
+        {
+          "pattern": "Search applogs by MachineName",
+          "spl": "index=applogs MachineName=EP11CS1WBS*"
+        },
+        {
+          "pattern": "Search applogs by Application and Environment",
+          "spl": "index=applogs Application=WexHealth.CDH.Web.Consumer Environment=PROD"
+        }
+      ]
+    },
+    {
+      "category": "Error and Exception Queries",
+      "description": "Finding errors, exceptions, and failures",
+      "queries": [
+        {
+          "pattern": "Search for errors and exceptions",
+          "spl": "index=applogs Environment=PROD Application=Switchboard.Web @l=Error OR @l=Fatal OR @x=*"
+        },
+        {
+          "pattern": "Search with specific exception type",
+          "spl": "index=applogs Environment=STG (@l=Error OR @l=Fatal) @x=\"System.Security.Cryptography.CryptographicException*\""
+        },
+        {
+          "pattern": "Search jams for failures",
+          "spl": "index=jams (\"Failed\" OR \"WARN\" OR \"ERROR\")"
+        }
+      ]
+    },
+    {
+      "category": "Aggregation with Stats",
+      "description": "Counting and grouping results",
+      "queries": [
+        {
+          "pattern": "Count by host",
+          "spl": "index=wineventlog source=\"WinEventLog:Application\" host IN (EVBCPRDBTS*,BO11PPRDBTS*) | stats count by host"
+        },
+        {
+          "pattern": "Count by field and sort",
+          "spl": "index=applogs Application IN (WexHealth.Apps.Web.EmployerPortal,WexHealth.Apps.Web.EmployerPortal.Auth) Environment=STG | stats count by UserName | sort count desc"
+        },
+        {
+          "pattern": "Count exceptions by SourceContext",
+          "spl": "index=applogs Application=WexHealth.CDH.Web.Administrator Environment=STG (@l=Error OR @l=Fatal) @x=\"*\" | stats count by SourceContext"
+        }
+      ]
+    },
+    {
+      "category": "Time-based Analysis",
+      "description": "Timechart for trend analysis",
+      "queries": [
+        {
+          "pattern": "Timechart by field",
+          "spl": "index=applogs Application=WexHealth.CDH.Apps.Web.Data.Api Environment=STG | timechart count by UserName"
+        },
+        {
+          "pattern": "Timechart for errors over time",
+          "spl": "index=applogs Application=WexHealth.Apps.Web.EmployerPortal Environment=STG (@l=Error OR @l=Fatal) @x=\"*\" | timechart count by SourceContext"
+        },
+        {
+          "pattern": "Simple timechart for specific error",
+          "spl": "index=applogs Environment=STG (@l=Error OR @l=Fatal) @x=\"System.Security.Cryptography.CryptographicException*\" | timechart count"
+        }
+      ]
+    },
+    {
+      "category": "Table Output",
+      "description": "Formatting results in table format",
+      "queries": [
+        {
+          "pattern": "Table with selected fields",
+          "spl": "index=applogs Application=WexHealth.Apps.Web.EmployerPortal Environment=STG (@l=Error OR @l=Fatal) @x=\"*\" UserName=\"*\" | table _time,Application,@mt,@x,UserName"
+        },
+        {
+          "pattern": "Table with stats and sort",
+          "spl": "index=iislogs s_ip=10.171.132.46 | stats count by host,s_ip,sitename,cs_host,X_Original_Host | sort host"
+        },
+        {
+          "pattern": "Table with rename and sort",
+          "spl": "index=azure_diagnostic_logs category=ApplicationGatewayAccessLog | rename time as timeUTC | table _time,timeUTC,backendPoolName,properties.httpStatus,properties.requestUri | sort _time"
+        }
+      ]
+    },
+    {
+      "category": "Multi-Application Search",
+      "description": "Searching across multiple applications",
+      "queries": [
+        {
+          "pattern": "Search multiple applications",
+          "spl": "index=applogs sourcetype=CDH Application IN (WexHealth.Apps.Web.EmployerPortal,WexHealth.Apps.Web.EmployerPortal.Auth,WexHealth.CDH.Apps.Web.Data.Api,WexHealth.CDH.NewEmployerSetup.Portal) Environment=STG"
+        },
+        {
+          "pattern": "Search with wildcard application name",
+          "spl": "index=applogs Environment=PROD Application=*LEAP* @l=Error OR @l=Fatal OR @x=*"
+        }
+      ]
+    },
+    {
+      "category": "Network and Infrastructure",
+      "description": "Network logs and infrastructure queries",
+      "queries": [
+        {
+          "pattern": "Azure firewall logs with table",
+          "spl": "index=corp_prod_paloalto dvc=MEU1* OR dvc=MWU1* action IN (blocked,allowed) | table _time,start_time,dvc,rule,action,src_ip,dest_ip | sort _time"
+        },
+        {
+          "pattern": "Imperva blocked requests",
+          "spl": "index=imperva sourcetype=incapsula_s3 action=blocked url=\"admin.lh1ondemand.com*\" act!=REQ_BAD_CLIENT_CLOSED_CONNECTION"
+        },
+        {
+          "pattern": "IIS logs for multiple hosts",
+          "spl": "index=iislogs host IN (MEU1CDBWEBH*P,MEU1CDBWBSH*P) | sort _time"
+        }
+      ]
+    },
+    {
+      "category": "Special Indexes",
+      "description": "Queries for specific log types",
+      "queries": [
+        {
+          "pattern": "JAMS with keyword search",
+          "spl": "index=jams \"RequestedReports\" OR \"ClaimSubstantiationProcessor\""
+        },
+        {
+          "pattern": "File processor errors",
+          "spl": "index=fileprocessor \"Error\""
+        },
+        {
+          "pattern": "Azure activity logs for changes",
+          "spl": "index=azure_activity_logs (\"eastus\" \"applicationGateways\") AND ((\"pts-web200-external\") OR (\"MEU1PTSWEBH20*P\"))"
+        }
+      ]
+    }
+  ],
+  "commonPatterns": {
+    "defaultIndex": "applogs",
+    "errorLevels": ["@l=Error", "@l=Fatal", "@l=Warning"],
+    "exceptionField": "@x",
+    "environments": ["PROD", "STG", "QA", "UAT", "TRN"],
+    "commonOperators": [
+      "| stats count by <field>",
+      "| timechart count by <field>",
+      "| table <field1>,<field2>,<field3>",
+      "| sort <field>",
+      "| sort <field> desc"
+    ]
+  }
+}
+

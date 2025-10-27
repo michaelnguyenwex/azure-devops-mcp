@@ -21,7 +21,7 @@ export function searchSplunkAITool(server: McpServer) {
         
         // Build file paths for configuration files
         const friendlyRepoPath = resolve(process.cwd(), 'src/integrations/splunk/friendlyRepo.json');
-        const sampleQueriesPath = resolve(process.cwd(), 'instructions/sample-splunk-queries.md');
+        const sampleQueriesPath = resolve(process.cwd(), 'src/integrations/splunk/sampleQueries.json');
         
         // Convert natural language to SPL using AI
         const splQuery = await buildSplunkQueryFromNL(query, friendlyRepoPath, sampleQueriesPath);

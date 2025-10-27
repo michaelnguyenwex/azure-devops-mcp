@@ -50,14 +50,60 @@ async function loadFriendlyMappings(friendlyRepoPath: string): Promise<string> {
   }
 }
 
+interface SampleQuery {
+  pattern: string;
+  spl: string;
+}
+
+interface QueryCategory {
+  category: string;
+  description: string;
+  queries: SampleQuery[];
+}
+
+interface SampleQueriesData {
+  description: string;
+  examples: QueryCategory[];
+  commonPatterns: {
+    defaultIndex: string;
+    errorLevels: string[];
+    exceptionField: string;
+    environments: string[];
+    commonOperators: string[];
+  };
+}
+
 /**
- * Reads the sample Splunk queries from markdown file
+ * Reads the sample Splunk queries from JSON file and formats them for the AI prompt
  */
 async function loadSampleQueries(sampleQueriesPath: string): Promise<string> {
   try {
     const content = await readFile(sampleQueriesPath, 'utf-8');
-    console.log('Loaded sample queries (first 200 chars):', content.substring(0, 200) + '...');
-    return content;
+    const data: SampleQueriesData = JSON.parse(content);
+    
+    // Format the JSON into a readable prompt structure
+    let formattedSamples = '**Sample Splunk Query Patterns:**\n\n';
+    
+    for (const category of data.examples) {
+      formattedSamples += `**${category.category}** - ${category.description}\n`;
+      for (const query of category.queries) {
+        formattedSamples += `  Pattern: ${query.pattern}\n`;
+        formattedSamples += `  SPL: ${query.spl}\n\n`;
+      }
+    }
+    
+    formattedSamples += '**Common Patterns:**\n';
+    formattedSamples += `- Default Index: ${data.commonPatterns.defaultIndex}\n`;
+    formattedSamples += `- Error Levels: ${data.commonPatterns.errorLevels.join(', ')}\n`;
+    formattedSamples += `- Exception Field: ${data.commonPatterns.exceptionField}\n`;
+    formattedSamples += `- Environments: ${data.commonPatterns.environments.join(', ')}\n`;
+    formattedSamples += `- Common Operators:\n`;
+    for (const op of data.commonPatterns.commonOperators) {
+      formattedSamples += `  ${op}\n`;
+    }
+    
+    console.log('Loaded sample queries from JSON (formatted for AI)');
+    return formattedSamples;
   } catch (error) {
     console.error('Error loading sample queries:', error);
     throw new Error(`Failed to load sample queries: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -109,7 +155,7 @@ ${sampleQueries}
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'azure-gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
