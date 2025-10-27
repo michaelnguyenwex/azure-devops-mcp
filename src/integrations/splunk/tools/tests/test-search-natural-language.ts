@@ -34,9 +34,8 @@ if (envResult.error) {
   console.log('   Environment variables loaded successfully\n');
 }
 
-import { buildSplunkQueryFromNL } from '../../../../triage/splunkQueryBuilder.js';
-import { getSplunkClient, initializeSplunkClient } from '../../client.js';
-import { getSplunkConfig } from '../../../../configStore.js';
+// Use dynamic imports to ensure they load AFTER dotenv configuration
+// This prevents the imported modules from trying to access env vars before they're loaded
 
 interface TestCase {
   name: string;
@@ -95,6 +94,9 @@ async function testQueryGeneration() {
   console.log('\n🧪 ============================================');
   console.log('   Testing Natural Language to SPL Generation');
   console.log('   ============================================\n');
+
+  // Dynamic import after env vars are loaded
+  const { buildSplunkQueryFromNL } = await import('../../../../triage/splunkQueryBuilder.js');
 
   const friendlyRepoPath = resolve(process.cwd(), 'src/integrations/splunk/friendlyRepo.json');
   const sampleQueriesPath = resolve(process.cwd(), 'src/integrations/splunk/sampleQueries.json');
@@ -167,6 +169,11 @@ async function testFullSearchExecution() {
   console.log(`⏰ Time Range: -5m to now\n`);
 
   try {
+    // Dynamic imports after env vars are loaded
+    const { buildSplunkQueryFromNL } = await import('../../../../triage/splunkQueryBuilder.js');
+    const { getSplunkClient, initializeSplunkClient } = await import('../../client.js');
+    const { getSplunkConfig } = await import('../../../../configStore.js');
+
     // Generate SPL
     const friendlyRepoPath = resolve(process.cwd(), 'src/integrations/splunk/friendlyRepo.json');
     const sampleQueriesPath = resolve(process.cwd(), 'src/integrations/splunk/sampleQueries.json');
@@ -216,6 +223,9 @@ async function testEdgeCases() {
   console.log('\n🧪 ============================================');
   console.log('   Testing Edge Cases');
   console.log('   ============================================\n');
+
+  // Dynamic import after env vars are loaded
+  const { buildSplunkQueryFromNL } = await import('../../../../triage/splunkQueryBuilder.js');
 
   const edgeCases = [
     {
