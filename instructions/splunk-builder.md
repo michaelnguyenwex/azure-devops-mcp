@@ -55,10 +55,10 @@ This document breaks down the feature of creating a natural language interface f
 ### Part 2: Splunk Interaction and Paging
 
 7.  **Implement Splunk Search Job Execution**
-    - [ ] In `search-natural-language.tool.ts`, import `getSplunkClient`.
-    - [ ] After generating the SPL query, use the Splunk client to create a search *job*. Use a method like `client.search.create(...)`.
-    - [ ] The `create` method should accept the generated SPL query and the `earliest_time` and `latest_time` parameters from the tool's input.
-    - [ ] The result of this call will be a search job object, which contains a Search ID (SID).
+    - [x] In `search-natural-language.tool.ts`, import `getSplunkClient`.
+    - [x] After generating the SPL query, use the Splunk client to create a search *job*. Use a method like `client.search.create(...)`.
+    - [x] The `create` method should accept the generated SPL query and the `earliest_time` and `latest_time` parameters from the tool's input.
+    - [x] The result of this call will be a search job object, which contains a Search ID (SID).
 
 8.  **Create Session State for Pagination Management**
     - [ ] Create a new file at `src/integrations/splunk/splunkSession.ts`.
