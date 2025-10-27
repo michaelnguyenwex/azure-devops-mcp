@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { buildSplunkQueryFromNL } from '../../../triage/splunkQueryBuilder.js';
+import { resolve } from 'path';
 
 export function searchSplunkAITool(server: McpServer) {
   server.tool(
@@ -11,15 +13,34 @@ export function searchSplunkAITool(server: McpServer) {
       latest_time: z.string().optional().default("now").describe("End time for the Splunk search")
     },
     async ({ query, earliest_time, latest_time }) => {
-      console.log('Natural Language Query:', query);
-      console.log('Time Range:', earliest_time, 'to', latest_time);
-      
-      return {
-        content: [{
-          type: "text",
-          text: `Mock success: Received natural language query "${query}" with time range ${earliest_time} to ${latest_time}`
-        }]
-      };
+      try {
+        console.log('🔍 Natural Language Query:', query);
+        console.log('⏰ Time Range:', earliest_time, 'to', latest_time);
+        
+        // Build file paths for configuration files
+        const friendlyRepoPath = resolve(process.cwd(), 'src/integrations/splunk/friendlyRepo.json');
+        const sampleQueriesPath = resolve(process.cwd(), 'instructions/sample-splunk-queries.md');
+        
+        // Convert natural language to SPL using AI
+        const splQuery = await buildSplunkQueryFromNL(query, friendlyRepoPath, sampleQueriesPath);
+        
+        console.log('✅ Generated SPL Query:', splQuery);
+        
+        return {
+          content: [{
+            type: "text",
+            text: `**Natural Language Query:** ${query}\n\n**Generated SPL Query:**\n\`\`\`\n${splQuery}\n\`\`\`\n\n**Time Range:** ${earliest_time} to ${latest_time}\n\n*Note: This is the generated query. Actual Splunk search execution will be implemented in the next step.*`
+          }]
+        };
+      } catch (error) {
+        console.error('❌ Error generating SPL query:', error);
+        return {
+          content: [{
+            type: "text",
+            text: `Error generating SPL query: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }]
+        };
+      }
     }
   );
 }

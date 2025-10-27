@@ -46,9 +46,9 @@ This document breaks down the feature of creating a natural language interface f
     - [x] The function should return the raw SPL string from the AI's response.
 
 6.  **Integrate Query Builder with the New Splunk Tool**
-    - [ ] In `src/integrations/splunk/tools/search-natural-language.tool.ts`, import the `buildSplunkQueryFromNL` function.
-    - [ ] Inside the tool's implementation, call `buildSplunkQueryFromNL`, passing the user's `natural_language_query` and the file paths to `friendlyRepo.json` and `sample-splunk-queries.md`.
-    - [ ] The tool should, for now, return the generated SPL query as a text response to the user for verification. The actual Splunk search is not yet performed.
+    - [x] In `src/integrations/splunk/tools/search-natural-language.tool.ts`, import the `buildSplunkQueryFromNL` function.
+    - [x] Inside the tool's implementation, call `buildSplunkQueryFromNL`, passing the user's `natural_language_query` and the file paths to `friendlyRepo.json` and `sample-splunk-queries.md`.
+    - [x] The tool should, for now, return the generated SPL query as a text response to the user for verification. The actual Splunk search is not yet performed.
 
 ---
 
