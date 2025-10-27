@@ -1,0 +1,72 @@
+{
+    "environments": [
+        {
+            "friendlyName": "QA",            
+            "splunkEnv": "QA"
+        },
+        {
+            "friendlyName": "UAT",            
+            "splunkEnv": "UAT"
+        },
+        {
+            "friendlyName": "TRN",            
+            "splunkEnv": "TRN"
+        },
+        {
+            "friendlyName": "PROD, production",            
+            "splunkEnv": "PROD"
+        }
+    ],
+    "appNames": [
+        {
+            "friendlyName": "auth service, authservice",
+            "repoName": "health-cdh-authservice",
+            "splunkAppName": "WexHealth.Apps.Web.EmployerPortal.Auth"
+        },
+        {
+            "friendlyName": "branding, brandingapi, branding api",
+            "repoName": "health-cdh-branding-api",
+            "splunkAppName": "WexHealth.CDH.Web.Branding.Api"
+        },
+        {
+            "friendlyName": "dataapi, data api",
+            "repoName": "health-cdh-ondemand",
+            "splunkAppName": "WexHealth.CDH.Apps.Web.Data.Api"
+        },
+        {
+            "friendlyName": "iapi, investment api",
+            "repoName": "health-cdh-investment-api",
+            "splunkAppName": "WexHealth.CDH.Investment.WebApi"
+        },
+        {
+            "friendlyName": "ioapi, orchestration api",
+            "repoName": "health-cdh-investmentorchestration-api",
+            "splunkAppName": "WexHealth.CDH.InvestmentOrchestrationApi"
+        },
+        {
+            "friendlyName": "nesw, new employer setup wizard",
+            "repoName": "health-cdh-ondemand",
+            "splunkAppName": "WexHealth.CDH.NewEmployerSetup.Portal"
+        },
+        {
+            "friendlyName": "cip, consumer investment portal",
+            "repoName": "health-cdh-consumerinvestment-portal",
+            "splunkAppName": "WexHealth.CDH.ConsumerInvestment.Portal"
+        },
+        {
+            "friendlyName": "cp, consumer portal",
+            "repoName": "health-cdh-ondemand",
+            "splunkAppName": "WexHealth.CDH.Web.Consumer"
+        },
+        {
+            "friendlyName": "ap, admin portal, wexhealth cloud",
+            "repoName": "health-cdh-ondemand",
+            "splunkAppName": "WexHealth.CDH.Web.Administrator"
+        },
+        {
+            "friendlyName": "ep, employer portal",
+            "repoName": "health-cdh-ondemand",
+            "splunkAppName": "WexHealth.Apps.Web.EmployerPortal.Auth"
+        }
+    ]
+}

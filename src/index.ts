@@ -21,7 +21,7 @@ import {
 } from './jiraUtils.js'; // Import Jira functionality
 import {
   searchSplunkTool,
-
+  searchSplunkAITool
 } from './integrations/splunk/tools/index.js';
 import { initializeSplunkClient } from './integrations/splunk/client.js';
 import { getSplunkConfig } from './configStore.js';
@@ -109,6 +109,7 @@ createJiraSubtasksTool(server); // Register the Jira subtasks tool
 
 // Register Splunk tools
 searchSplunkTool(server);
+searchSplunkAITool(server);
 
 // Register Triage tools
 triageSplunkErrorTool(server);
