@@ -73,16 +73,16 @@ This document breaks down the feature of creating a natural language interface f
     - [x] Check if the total number of results is greater than 25. If it is, append a message to the output: "More results are available. Type 'next' to see the next page."
 
 10. **Create a 'next' Command Tool for Pagination**
-    - [ ] Create a new tool file at `src/integrations/splunk/tools/next.tool.ts`.
-    - [ ] Define a new tool named `get_next_splunk_results`.
-    - [ ] The tool's description should be: "Retrieves the next page of results from the previous Splunk search."
-    - [ ] This tool should take no parameters.
+    - [x] Create a new tool file at `src/integrations/splunk/tools/next.tool.ts`.
+    - [x] Define a new tool named `get_next_splunk_results`.
+    - [x] The tool's description should be: "Retrieves the next page of results from the previous Splunk search."
+    - [x] This tool should take no parameters.
 
 11. **Implement Pagination Logic in 'next' Tool**
-    - [ ] In `next.tool.ts`, import the Splunk client and the session manager from `splunkSession.ts`.
-    - [ ] In the tool's implementation, retrieve the `sid` and current `offset` from the session manager.
-    - [ ] If no active job SID is found, return an error message: "No active search found. Please perform a search first."
-    - [ ] Calculate the new offset by adding 25 to the current offset.
-    - [ ] Fetch the next set of results using the `sid`, the new `offset`, and a `count` of 25.
-    - [ ] Update the offset in the session state with the new offset value.
-    - [ ] Return the new results. Check if there are still more results available and append the "Type 'next'..." message if necessary.
+    - [x] In `next.tool.ts`, import the Splunk client and the session manager from `splunkSession.ts`.
+    - [x] In the tool's implementation, retrieve the `sid` and current `offset` from the session manager.
+    - [x] If no active job SID is found, return an error message: "No active search found. Please perform a search first."
+    - [x] Calculate the new offset by adding 25 to the current offset.
+    - [x] Fetch the next set of results using the `sid`, the new `offset`, and a `count` of 25.
+    - [x] Update the offset in the session state with the new offset value.
+    - [x] Return the new results. Check if there are still more results available and append the "Type 'next'..." message if necessary.
