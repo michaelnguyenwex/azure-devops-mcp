@@ -12,11 +12,31 @@
  * Usage: npx tsx src/integrations/splunk/tools/tests/test-search-natural-language.ts
  */
 
-import 'dotenv/config';
+// Load environment variables from .env file in project root
+import dotenv from 'dotenv';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Get the directory of this file and resolve to project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = resolve(__dirname, '../../../../../');
+
+// Load .env file explicitly from project root
+const envResult = dotenv.config({ path: resolve(projectRoot, '.env') });
+
+if (envResult.error) {
+  console.warn('⚠️  Warning: Could not load .env file:', envResult.error.message);
+  console.warn('   Attempting to use existing environment variables...\n');
+} else {
+  console.log('✅ Loaded .env file from:', resolve(projectRoot, '.env'));
+  console.log('   Environment variables loaded successfully\n');
+}
+
 import { buildSplunkQueryFromNL } from '../../../../triage/splunkQueryBuilder.js';
 import { getSplunkClient, initializeSplunkClient } from '../../client.js';
 import { getSplunkConfig } from '../../../../configStore.js';
-import { resolve } from 'path';
 
 interface TestCase {
   name: string;
@@ -237,6 +257,12 @@ async function runAllTests() {
   console.log('╔════════════════════════════════════════════════════════╗');
   console.log('║  Natural Language Splunk Search Tool - Test Suite     ║');
   console.log('╚════════════════════════════════════════════════════════╝');
+  console.log('\n📋 Environment Check:');
+  console.log(`   SPLUNK_HOST: ${process.env.SPLUNK_HOST ? '✓ Set' : '✗ Not set'}`);
+  console.log(`   SPLUNK_TOKEN: ${process.env.SPLUNK_TOKEN ? '✓ Set' : '✗ Not set'}`);
+  console.log(`   OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '✓ Set' : '✗ Not set'}`);
+  console.log(`   OPENAI_API_BASE_URL: ${process.env.OPENAI_API_BASE_URL ? '✓ Set' : '✗ Not set'}`);
+  console.log('');
   
   try {
     // Test 1: Query Generation

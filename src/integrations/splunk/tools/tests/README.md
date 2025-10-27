@@ -29,10 +29,14 @@ Comprehensive test suite for the `search_splunk` tool that converts natural lang
 ### Running the Tests
 
 ```bash
-# Run all tests
+# Option 1: Using npm script (recommended - builds first)
+npm run test:splunk-nl
+
+# Option 2: Using tsx (TypeScript execution)
 npx tsx src/integrations/splunk/tools/tests/test-search-natural-language.ts
 
-# Or if you have built the project
+# Option 3: After building manually
+npm run build
 node build/integrations/splunk/tools/tests/test-search-natural-language.js
 ```
 
