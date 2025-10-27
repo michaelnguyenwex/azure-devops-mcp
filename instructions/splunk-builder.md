@@ -61,10 +61,10 @@ This document breaks down the feature of creating a natural language interface f
     - [x] The result of this call will be a search job object, which contains a Search ID (SID).
 
 8.  **Create Session State for Pagination Management**
-    - [ ] Create a new file at `src/integrations/splunk/splunkSession.ts`.
-    - [ ] Implement a simple in-memory singleton object or class to manage session state.
-    - [ ] It should have methods like `setJob(sid: string, totalResults: number)`, `getJob()`, `setOffset(offset: number)`, and `getOffset()`.
-    - [ ] In `search-natural-language.tool.ts`, after creating the search job, use this session manager to store the SID and the total number of results for that job. Reset the offset to 0.
+    - [x] Create a new file at `src/integrations/splunk/splunkSession.ts`.
+    - [x] Implement a simple in-memory singleton object or class to manage session state.
+    - [x] It should have methods like `setJob(sid: string, totalResults: number)`, `getJob()`, `setOffset(offset: number)`, and `getOffset()`.
+    - [x] In `search-natural-language.tool.ts`, after creating the search job, use this session manager to store the SID and the total number of results for that job. Reset the offset to 0.
 
 9.  **Fetch and Return Initial Page of Results**
     - [ ] After the search job is created and the SID is stored, use the Splunk client to retrieve the results for that job.
