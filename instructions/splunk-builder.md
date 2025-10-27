@@ -30,9 +30,9 @@ This document breaks down the feature of creating a natural language interface f
     - [x] This structured string will be used in the AI prompt later. For now, you can log it to the console to verify correctness.
 
 4.  **Implement Sample Query Integration Logic**
-    - [ ] In `splunkQueryBuilder.ts`, further modify `buildSplunkQueryFromNL`.
-    - [ ] Add logic to read the markdown file content from the path provided in the `sampleQueriesPath` argument.
-    - [ ] Store this content in a variable. This content will be used as the few-shot examples in the AI prompt.
+    - [x] In `splunkQueryBuilder.ts`, further modify `buildSplunkQueryFromNL`.
+    - [x] Add logic to read the markdown file content from the path provided in the `sampleQueriesPath` argument.
+    - [x] Store this content in a variable. This content will be used as the few-shot examples in the AI prompt.
 
 5.  **Implement AI-Powered SPL Generation**
     - [ ] In `splunkQueryBuilder.ts`, import the necessary OpenAI client functionality (e.g., `getOpenAIConfig`).

@@ -49,6 +49,20 @@ async function loadFriendlyMappings(friendlyRepoPath: string): Promise<string> {
   }
 }
 
+/**
+ * Reads the sample Splunk queries from markdown file
+ */
+async function loadSampleQueries(sampleQueriesPath: string): Promise<string> {
+  try {
+    const content = await readFile(sampleQueriesPath, 'utf-8');
+    console.log('Loaded sample queries (first 200 chars):', content.substring(0, 200) + '...');
+    return content;
+  } catch (error) {
+    console.error('Error loading sample queries:', error);
+    throw new Error(`Failed to load sample queries: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export async function buildSplunkQueryFromNL(
   naturalLanguageQuery: string,
   friendlyRepoPath: string,
@@ -57,7 +71,10 @@ export async function buildSplunkQueryFromNL(
   // Load friendly name mappings
   const friendlyMappings = await loadFriendlyMappings(friendlyRepoPath);
   
-  // For now, return a mock SPL query with the mapping loaded
+  // Load sample queries
+  const sampleQueries = await loadSampleQueries(sampleQueriesPath);
+  
+  // For now, return a mock SPL query with both mappings and samples loaded
   return `index=applogs "DUMMY QUERY"`;
 }
 
