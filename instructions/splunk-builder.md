@@ -35,15 +35,15 @@ This document breaks down the feature of creating a natural language interface f
     - [x] Store this content in a variable. This content will be used as the few-shot examples in the AI prompt.
 
 5.  **Implement AI-Powered SPL Generation**
-    - [ ] In `splunkQueryBuilder.ts`, import the necessary OpenAI client functionality (e.g., `getOpenAIConfig`).
-    - [ ] Construct a detailed system prompt for the OpenAI model. The prompt must:
+    - [x] In `splunkQueryBuilder.ts`, import the necessary OpenAI client functionality (e.g., `getOpenAIConfig`).
+    - [x] Construct a detailed system prompt for the OpenAI model. The prompt must:
         - Instruct the AI that its sole purpose is to convert a user's natural language query into a valid Splunk Processing Language (SPL) query.
         - Specify that the default index must be `applogs`.
         - Include the friendly name and environment mappings generated in step 3.
         - Include the sample queries read from the markdown file in step 4 as examples of how to construct valid queries.
         - Emphasize that the output must *only* be the raw SPL query string and nothing else.
-    - [ ] Use the OpenAI client to send the system prompt and the user's `naturalLanguageQuery` to the language model.
-    - [ ] The function should return the raw SPL string from the AI's response.
+    - [x] Use the OpenAI client to send the system prompt and the user's `naturalLanguageQuery` to the language model.
+    - [x] The function should return the raw SPL string from the AI's response.
 
 6.  **Integrate Query Builder with the New Splunk Tool**
     - [ ] In `src/integrations/splunk/tools/search-natural-language.tool.ts`, import the `buildSplunkQueryFromNL` function.
