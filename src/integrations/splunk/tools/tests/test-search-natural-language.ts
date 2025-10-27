@@ -15,18 +15,11 @@
 // Load environment variables from .env file in project root
 import dotenv from 'dotenv';
 import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
-// Get the directory of this file and resolve to project root
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const projectRoot = resolve(__dirname, '../../../../../');
-
-// Load .env file explicitly from project root
-const envPath = resolve(projectRoot, '.env');
-console.log('🔍 Attempting to load .env from:', envPath);
-console.log('   Project root:', projectRoot);
+// Use process.cwd() which should be the project root when running via npm script
+const envPath = resolve(process.cwd(), '.env');
+console.log('\n🔍 Environment Setup:');
+console.log('   Loading .env from:', envPath);
 console.log('   Current working directory:', process.cwd());
 
 const envResult = dotenv.config({ path: envPath });
