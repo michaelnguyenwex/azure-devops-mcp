@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { buildSplunkQueryFromNL } from '../../../triage/splunkQueryBuilder.js';
+import { getSplunkClient } from '../client.js';
+import { sessionManager } from '../splunkSession.js';
 import { resolve } from 'path';
 
 export function searchSplunkAITool(server: McpServer) {
@@ -26,18 +28,53 @@ export function searchSplunkAITool(server: McpServer) {
         
         console.log('✅ Generated SPL Query:', splQuery);
         
+        // Get Splunk client and create search job
+        const client = getSplunkClient();
+        console.log('🔄 Creating Splunk search job...');
+        
+        const jobResponse = await client.search.createJob(splQuery, earliest_time || '-24h', latest_time || 'now');
+        const sid = jobResponse.sid;
+        
+        console.log('✅ Search job created with SID:', sid);
+        
+        // Fetch first page of results (25 items)
+        const resultsResponse = await client.search.getJobResults(sid, 25, 0);
+        const results = resultsResponse.results || [];
+        
+        console.log(`📊 Retrieved ${results.length} results`);
+        
+        // Store job in session for pagination
+        sessionManager.setJob(sid, results.length, splQuery, earliest_time || '-24h', latest_time || 'now');
+        
+        // Format results
+        let output = `**Natural Language Query:** ${query}\n\n`;
+        output += `**Generated SPL Query:**\n\`\`\`\n${splQuery}\n\`\`\`\n\n`;
+        output += `**Time Range:** ${earliest_time} to ${latest_time}\n\n`;
+        output += `**Results (showing ${results.length} items):**\n\n`;
+        
+        if (results.length === 0) {
+          output += '*No results found.*\n';
+        } else {
+          output += JSON.stringify(results, null, 2);
+          
+          // Check if there might be more results
+          if (results.length === 25) {
+            output += `\n\n---\n**More results may be available.** Type 'next' or use the \`get_next_splunk_results\` tool to see the next page.`;
+          }
+        }
+        
         return {
           content: [{
             type: "text",
-            text: `**Natural Language Query:** ${query}\n\n**Generated SPL Query:**\n\`\`\`\n${splQuery}\n\`\`\`\n\n**Time Range:** ${earliest_time} to ${latest_time}\n\n*Note: This is the generated query. Actual Splunk search execution will be implemented in the next step.*`
+            text: output
           }]
         };
       } catch (error) {
-        console.error('❌ Error generating SPL query:', error);
+        console.error('❌ Error executing Splunk search:', error);
         return {
           content: [{
             type: "text",
-            text: `Error generating SPL query: ${error instanceof Error ? error.message : 'Unknown error'}`
+            text: `Error executing Splunk search: ${error instanceof Error ? error.message : 'Unknown error'}`
           }]
         };
       }

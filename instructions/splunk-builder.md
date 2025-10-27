@@ -67,10 +67,10 @@ This document breaks down the feature of creating a natural language interface f
     - [x] In `search-natural-language.tool.ts`, after creating the search job, use this session manager to store the SID and the total number of results for that job. Reset the offset to 0.
 
 9.  **Fetch and Return Initial Page of Results**
-    - [ ] After the search job is created and the SID is stored, use the Splunk client to retrieve the results for that job.
-    - [ ] Use a method like `client.search.getResults({ sid: '...', count: 25, offset: 0 })`.
-    - [ ] The tool should return the fetched results formatted as a string.
-    - [ ] Check if the total number of results is greater than 25. If it is, append a message to the output: "More results are available. Type 'next' to see the next page."
+    - [x] After the search job is created and the SID is stored, use the Splunk client to retrieve the results for that job.
+    - [x] Use a method like `client.search.getResults({ sid: '...', count: 25, offset: 0 })`.
+    - [x] The tool should return the fetched results formatted as a string.
+    - [x] Check if the total number of results is greater than 25. If it is, append a message to the output: "More results are available. Type 'next' to see the next page."
 
 10. **Create a 'next' Command Tool for Pagination**
     - [ ] Create a new tool file at `src/integrations/splunk/tools/next.tool.ts`.
