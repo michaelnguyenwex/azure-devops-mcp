@@ -17,10 +17,10 @@ This document breaks down the feature of creating a natural language interface f
     - [x] The initial implementation of the tool function should be a placeholder that logs the input parameters and returns a mock success message.
 
 2.  **Create the Natural Language to SPL Query Builder Stub**
-    - [ ] Create a new file at `src/triage/splunkQueryBuilder.ts`.
-    - [ ] In this file, export an async function named `buildSplunkQueryFromNL`.
-    - [ ] The function signature should be `buildSplunkQueryFromNL(naturalLanguageQuery: string, friendlyRepoPath: string, sampleQueriesPath: string): Promise<string>`.
-    - [ ] The initial implementation should return a hardcoded mock SPL query string like `index=applogs "DUMMY QUERY"`.
+    - [x] Create a new file at `src/triage/splunkQueryBuilder.ts`.
+    - [x] In this file, export an async function named `buildSplunkQueryFromNL`.
+    - [x] The function signature should be `buildSplunkQueryFromNL(naturalLanguageQuery: string, friendlyRepoPath: string, sampleQueriesPath: string): Promise<string>`.
+    - [x] The initial implementation should return a hardcoded mock SPL query string like `index=applogs "DUMMY QUERY"`.
 
 3.  **Implement Friendly Name and Environment Mapping Logic**
     - [ ] In `splunkQueryBuilder.ts`, modify `buildSplunkQueryFromNL`.
