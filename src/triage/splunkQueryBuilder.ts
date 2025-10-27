@@ -3,12 +3,61 @@
  * Converts user-friendly natural language queries into valid SPL queries
  */
 
+import { readFile } from 'fs/promises';
+import { resolve } from 'path';
+
+interface FriendlyEnvironment {
+  friendlyName: string;
+  splunkEnv: string;
+}
+
+interface FriendlyApp {
+  friendlyName: string;
+  repoName: string;
+  splunkAppName: string;
+}
+
+interface FriendlyRepoMapping {
+  environments: FriendlyEnvironment[];
+  appNames: FriendlyApp[];
+}
+
+/**
+ * Reads and parses the friendly repository mapping JSON
+ */
+async function loadFriendlyMappings(friendlyRepoPath: string): Promise<string> {
+  try {
+    const content = await readFile(friendlyRepoPath, 'utf-8');
+    const mappings: FriendlyRepoMapping = JSON.parse(content);
+    
+    // Build a structured mapping string for the AI prompt
+    let mappingText = '**Environment Mappings:**\n';
+    for (const env of mappings.environments) {
+      mappingText += `- When user says: "${env.friendlyName}" → Use Environment="${env.splunkEnv}"\n`;
+    }
+    
+    mappingText += '\n**Application Mappings:**\n';
+    for (const app of mappings.appNames) {
+      mappingText += `- When user says: "${app.friendlyName}" → Use Application="${app.splunkAppName}"\n`;
+    }
+    
+    console.log('Loaded friendly name mappings:\n', mappingText);
+    return mappingText;
+  } catch (error) {
+    console.error('Error loading friendly mappings:', error);
+    throw new Error(`Failed to load friendly mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export async function buildSplunkQueryFromNL(
   naturalLanguageQuery: string,
   friendlyRepoPath: string,
   sampleQueriesPath: string
 ): Promise<string> {
-  // Initial stub implementation - returns a mock SPL query
+  // Load friendly name mappings
+  const friendlyMappings = await loadFriendlyMappings(friendlyRepoPath);
+  
+  // For now, return a mock SPL query with the mapping loaded
   return `index=applogs "DUMMY QUERY"`;
 }
 

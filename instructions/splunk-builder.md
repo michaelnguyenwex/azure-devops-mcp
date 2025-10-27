@@ -23,11 +23,11 @@ This document breaks down the feature of creating a natural language interface f
     - [x] The initial implementation should return a hardcoded mock SPL query string like `index=applogs "DUMMY QUERY"`.
 
 3.  **Implement Friendly Name and Environment Mapping Logic**
-    - [ ] In `splunkQueryBuilder.ts`, modify `buildSplunkQueryFromNL`.
-    - [ ] Add logic to read the contents of the JSON file path provided in the `friendlyRepoPath` argument.
-    - [ ] Parse the JSON content.
-    - [ ] Create a structured string or markdown table that clearly lists the mappings. For example: "When a user says 'QA', use 'QA' as the splunkEnv. When a user says 'auth service', use 'WexHealth.Apps.Web.EmployerPortal.Auth' as the splunkAppName."
-    - [ ] This structured string will be used in the AI prompt later. For now, you can log it to the console to verify correctness.
+    - [x] In `splunkQueryBuilder.ts`, modify `buildSplunkQueryFromNL`.
+    - [x] Add logic to read the contents of the JSON file path provided in the `friendlyRepoPath` argument.
+    - [x] Parse the JSON content.
+    - [x] Create a structured string or markdown table that clearly lists the mappings. For example: "When a user says 'QA', use 'QA' as the splunkEnv. When a user says 'auth service', use 'WexHealth.Apps.Web.EmployerPortal.Auth' as the splunkAppName."
+    - [x] This structured string will be used in the AI prompt later. For now, you can log it to the console to verify correctness.
 
 4.  **Implement Sample Query Integration Logic**
     - [ ] In `splunkQueryBuilder.ts`, further modify `buildSplunkQueryFromNL`.
