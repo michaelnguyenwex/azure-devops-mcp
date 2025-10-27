@@ -4,7 +4,7 @@ import { getSplunkClient } from '../client.js';
 
 export function searchSplunkTool(server: McpServer) {
   server.tool(
-    "search_splunk",
+    "search_splunk_byquery",
     "Execute a Splunk search query using SPL (Search Processing Language). Searches through Splunk indexes for logs, metrics, and machine data.",
     {
       search_query: z.string().describe("The Splunk SPL query to execute against Splunk data"),

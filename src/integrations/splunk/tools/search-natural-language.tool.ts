@@ -7,7 +7,7 @@ import { resolve } from 'path';
 
 export function searchSplunkAITool(server: McpServer) {
   server.tool(
-    "search_splunk_ai",
+    "search_splunk",
     "Execute a Splunk search query using natural language.",
     {
       query: z.string().describe("The search query in plain English (e.g., 'show me errors for the consumer portal in prod')"),
