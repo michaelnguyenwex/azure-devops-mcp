@@ -515,4 +515,171 @@ export class GitHubService {
       return null;
     }
   }
- }
+
+  /**
+   * Analyzes a GitHub PR for DevOps story creation.
+   * Extracts feature flag name and deployment information from PR title and body.
+   * 
+   * @param prUrl - The GitHub PR URL
+   * @returns Promise resolving to PR analysis result with extracted data
+   */
+  async analyzePRForDevOps(prUrl: string): Promise<{
+    featureFlagName: string | null;
+    month: string | null;
+    target: string | null;
+    prodDeploy: string | null;
+    targetDate: string | null;
+  }> {
+    try {
+      console.log(`\n🔍 Analyzing PR for DevOps: ${prUrl}`);
+      
+      // Parse PR URL to get repo and PR number
+      const prInfo = this.parsePullRequestUrl(prUrl);
+      if (!prInfo) {
+        throw new Error(`Failed to parse PR URL: ${prUrl}`);
+      }
+
+      // Get PR details
+      const prDetails = await this.getPullRequestDetails(prInfo.fullRepoName, prInfo.pullNumber);
+      if (!prDetails) {
+        throw new Error(`Failed to get PR details for ${prUrl}`);
+      }
+
+      console.log(`📄 PR Title: ${prDetails.title}`);
+      console.log(`📄 PR Body length: ${prDetails.description.length} characters`);
+
+      // Get app name for context (optional)
+      const appInfo = await this.getAppNameFromPR(prUrl);
+      const appName = appInfo?.appName || 'unknown';
+      console.log(`📦 App Name: ${appName}`);
+
+      // Use OpenAI to extract feature flag and deployment info
+      const openAIConfig = await this.getOpenAIConfig();
+      
+      const prompt = `Analyze this GitHub Pull Request and extract the following information:
+
+1. Feature Flag Name - Look for patterns like:
+   - "Feature Flag 1: CDH500..."
+   - "Feature Flag: NAME"
+   - Any mention of feature flag with a name/identifier
+   
+2. Feature Deployment line - Look for patterns like:
+   - "Feature Deployment: 2026.Feb (Feb)"
+   - "Deployment: 2026.03"
+   - Any deployment schedule with year and month
+
+PR Title: ${prDetails.title}
+
+PR Body:
+${prDetails.description}
+
+Return JSON only, no other text. Format:
+{
+  "featureFlagName": "extracted flag name or null",
+  "featureDeployment": "extracted deployment string or null"
+}
+
+Examples:
+- If you find "Feature Flag 1: CDH500-EnableNewUI" → {"featureFlagName":"CDH500-EnableNewUI","featureDeployment":null}
+- If you find "Feature Deployment: 2026.Feb (Feb)" → {"featureFlagName":null,"featureDeployment":"2026.Feb (Feb)"}
+- If both found → {"featureFlagName":"CDH500-EnableNewUI","featureDeployment":"2026.Feb (Feb)"}
+- If neither found → {"featureFlagName":null,"featureDeployment":null}`;
+
+      const response = await axios.post(
+        `${openAIConfig.baseUrl}/chat/completions`,
+        {
+          model: 'azure-gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are a PR analyzer that outputs only JSON.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 500
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${openAIConfig.apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const content = response.data.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
+      }
+
+      console.log(`🤖 OpenAI extraction result: ${content}`);
+
+      // Parse JSON response
+      let extracted: { featureFlagName: string | null; featureDeployment: string | null };
+      try {
+        extracted = JSON.parse(content);
+      } catch (jsonError) {
+        // Try to extract JSON from markdown code blocks if present
+        const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          extracted = JSON.parse(jsonMatch[1]);
+        } else {
+          throw new Error(`Failed to parse OpenAI response as JSON: ${content}`);
+        }
+      }
+
+      // Process deployment information
+      let month: string | null = null;
+      let target: string | null = null;
+      let prodDeploy: string | null = null;
+      let targetDate: string | null = null;
+
+      if (extracted.featureDeployment) {
+        console.log(`📅 Processing deployment: ${extracted.featureDeployment}`);
+        
+        target = extracted.featureDeployment;
+        
+        // Extract month from various formats
+        // "2026.Feb (Feb)" → month = "Feb"
+        // "2026.02" → month = "02"
+        const monthMatch = extracted.featureDeployment.match(/\(([A-Za-z]+)\)|\.([A-Za-z]+)|\.(\d{2})/);
+        if (monthMatch) {
+          month = monthMatch[1] || monthMatch[2] || monthMatch[3];
+          console.log(`📅 Extracted month: ${month}`);
+        }
+        
+        // Extract production deployment version
+        // "2026.Feb (Feb)" → prodDeploy = "2026.Feb"
+        // Remove anything in parentheses and trim
+        prodDeploy = extracted.featureDeployment.replace(/\s*\(.*?\)\s*/, '').trim();
+        console.log(`📅 Production deployment: ${prodDeploy}`);
+        
+        // Get target date using date mapper
+        const { getTargetDate } = await import('../devops/dateMapper.js');
+        targetDate = getTargetDate(prodDeploy);
+        console.log(`📅 Target date: ${targetDate}`);
+      }
+
+      const result = {
+        featureFlagName: extracted.featureFlagName,
+        month,
+        target,
+        prodDeploy,
+        targetDate
+      };
+
+      console.log(`✅ PR Analysis complete:`, result);
+
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to analyze PR for DevOps:', error);
+      throw new Error(`Failed to analyze PR: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Helper method to get OpenAI config
+   * @private
+   */
+  private async getOpenAIConfig() {
+    const { getOpenAIConfig } = await import('../configStore.js');
+    return await getOpenAIConfig();
+  }
+}

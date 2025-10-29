@@ -61,26 +61,26 @@ Create an MCP function to automatically generate Azure DevOps stories from GitHu
 
 ## 4. Enhance GitHub Service for PR Analysis
 
-- [ ] Open file `src/triage/githubService.ts`
-- [ ] Locate the `getPullRequestDetails` function
-- [ ] Create new function `analyzePRForDevOps(prUrl: string): Promise<PRAnalysisResult>`
-  - [ ] Call existing `getPullRequestDetails` to get PR title and body
-  - [ ] Call existing `getAppNameFromPR` to get app name (save for later use)
-  - [ ] Use OpenAI API (`azure-gpt-4o-mini`) to extract from PR title and body:
-    - [ ] Feature flag name (look for patterns like "Feature Flag 1: CDH500..." or similar)
-    - [ ] Feature Deployment line (pattern: "Feature Deployment: 2026.Feb (Feb)")
-  - [ ] Build OpenAI prompt with clear instructions to extract these two pieces of information
-  - [ ] Parse OpenAI response as JSON
-  - [ ] From feature deployment text, extract:
-    - [ ] `month`: the month abbreviation (e.g., "Feb")
-    - [ ] `target`: the full version string (e.g., "2026.Feb (Feb)")
-    - [ ] `prodDeploy`: the production deployment version (e.g., "2026.Feb")
-  - [ ] Import `getTargetDate` from dateMapper
-  - [ ] Call `getTargetDate(target)` to get the UAT deploy date
-  - [ ] Store result in `targetDate` field
-  - [ ] Return `PRAnalysisResult` object with all extracted data
-  - [ ] Add comprehensive error handling and logging
-- [ ] Export the new function
+- [x] Open file `src/triage/githubService.ts`
+- [x] Locate the `getPullRequestDetails` function
+- [x] Create new function `analyzePRForDevOps(prUrl: string): Promise<PRAnalysisResult>`
+  - [x] Call existing `getPullRequestDetails` to get PR title and body
+  - [x] Call existing `getAppNameFromPR` to get app name (save for later use)
+  - [x] Use OpenAI API (`azure-gpt-4o-mini`) to extract from PR title and body:
+    - [x] Feature flag name (look for patterns like "Feature Flag 1: CDH500..." or similar)
+    - [x] Feature Deployment line (pattern: "Feature Deployment: 2026.Feb (Feb)")
+  - [x] Build OpenAI prompt with clear instructions to extract these two pieces of information
+  - [x] Parse OpenAI response as JSON
+  - [x] From feature deployment text, extract:
+    - [x] `month`: the month abbreviation (e.g., "Feb")
+    - [x] `target`: the full version string (e.g., "2026.Feb (Feb)")
+    - [x] `prodDeploy`: the production deployment version (e.g., "2026.Feb")
+  - [x] Import `getTargetDate` from dateMapper
+  - [x] Call `getTargetDate(target)` to get the UAT deploy date
+  - [x] Store result in `targetDate` field
+  - [x] Return `PRAnalysisResult` object with all extracted data
+  - [x] Add comprehensive error handling and logging
+- [x] Export the new function
 
 ---
 
