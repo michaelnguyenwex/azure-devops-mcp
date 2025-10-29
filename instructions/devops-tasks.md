@@ -86,25 +86,25 @@ Create an MCP function to automatically generate Azure DevOps stories from GitHu
 
 ## 5. Create Azure DevOps API Client Utility
 
-- [ ] Create file `src/devops/azureDevOpsClient.ts`
-- [ ] Import axios or http client used in `testCaseUtils.ts`
-- [ ] Reference `registerTestCaseTool` in `src/testCaseUtils.ts` for Azure API patterns
-- [ ] Create function `getAzureDevOpsHeaders(): Record<string, string>`
-  - [ ] Get PAT token from environment variable
-  - [ ] Return headers object with Authorization and Content-Type
-- [ ] Create function `createWorkItem(fields: DevOpsStoryFields): Promise<any>`
-  - [ ] Build Azure DevOps API URL: `https://dev.azure.com/WexHealthTech/Health/_apis/wit/workitems/$DevOps Story?api-version=7.0`
-  - [ ] Transform fields object into Azure DevOps PATCH operations format (array of operations)
-  - [ ] Each field becomes: `{ "op": "add", "path": "/fields/[fieldName]", "value": [fieldValue] }`
-  - [ ] Make POST/PATCH request to Azure DevOps API
-  - [ ] Return the created work item response
-  - [ ] Add error handling with descriptive error messages
-- [ ] Create function `getAllPipelines(): Promise<any[]>`
-  - [ ] Build URL: `https://dev.azure.com/WexHealthTech/Health/_apis/pipelines?api-version=7.2-preview.1`
-  - [ ] Make GET request with Azure DevOps headers
-  - [ ] Return array of pipeline objects
-  - [ ] Add error handling
-- [ ] Export all functions
+- [x] Create file `src/devops/azureDevOpsClient.ts`
+- [x] Import axios or http client used in `testCaseUtils.ts`
+- [x] Reference `registerTestCaseTool` in `src/testCaseUtils.ts` for Azure API patterns
+- [x] Create function `getAzureDevOpsHeaders(): Record<string, string>`
+  - [x] Get PAT token from environment variable
+  - [x] Return headers object with Authorization and Content-Type
+- [x] Create function `createWorkItem(fields: DevOpsStoryFields): Promise<any>`
+  - [x] Build Azure DevOps API URL: `https://dev.azure.com/WexHealthTech/Health/_apis/wit/workitems/$DevOps Story?api-version=7.0`
+  - [x] Transform fields object into Azure DevOps PATCH operations format (array of operations)
+  - [x] Each field becomes: `{ "op": "add", "path": "/fields/[fieldName]", "value": [fieldValue] }`
+  - [x] Make POST/PATCH request to Azure DevOps API
+  - [x] Return the created work item response
+  - [x] Add error handling with descriptive error messages
+- [x] Create function `getAllPipelines(): Promise<any[]>`
+  - [x] Build URL: `https://dev.azure.com/WexHealthTech/Health/_apis/pipelines?api-version=7.2-preview.1`
+  - [x] Make GET request with Azure DevOps headers
+  - [x] Return array of pipeline objects
+  - [x] Add error handling
+- [x] Export all functions
 
 ---
 
