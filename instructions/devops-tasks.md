@@ -243,21 +243,21 @@ Create an MCP function to automatically generate Azure DevOps stories from GitHu
 
 ## 11. Register MCP Tool
 
-- [ ] Open file `src/index.ts`
-- [ ] Import `createDevOpsStory` from `src/devops/create-devops`
-- [ ] Locate where other MCP tools are registered (likely in a server.tool() or similar section)
-- [ ] Register new tool `create-devops`:
-  - [ ] Set tool name: "create-devops"
-  - [ ] Set description: "Create Azure DevOps story from GitHub PR for feature flags or pipeline operations"
-  - [ ] Define input schema:
-    - [ ] `userRequest`: string, required, description: "Natural language request like 'create ff [PR_URL]' or 'remove ff [PR_URL]' or 'run pipeline [PR_URL]'"
-  - [ ] Implement handler:
-    - [ ] Extract `userRequest` from arguments
-    - [ ] Call `await createDevOpsStory(userRequest)`
-    - [ ] Format response with work item details
-    - [ ] Return success message with work item ID and URL
-  - [ ] Add error handling to return user-friendly error messages
-- [ ] Ensure tool is properly exported/registered with the MCP server
+- [x] Open file `src/index.ts`
+- [x] Import `createDevOpsStory` from `src/devops/create-devops`
+- [x] Locate where other MCP tools are registered (likely in a server.tool() or similar section)
+- [x] Register new tool `create-devops`:
+  - [x] Set tool name: "create-devops"
+  - [x] Set description: "Create Azure DevOps story from GitHub PR for feature flags or pipeline operations"
+  - [x] Define input schema:
+    - [x] `userRequest`: string, required, description: "Natural language request like 'create ff [PR_URL]' or 'remove ff [PR_URL]' or 'run pipeline [PR_URL]'"
+  - [x] Implement handler:
+    - [x] Extract `userRequest` from arguments
+    - [x] Call `await createDevOpsStory(userRequest)`
+    - [x] Format response with work item details
+    - [x] Return success message with work item ID and URL
+  - [x] Add error handling to return user-friendly error messages
+- [x] Ensure tool is properly exported/registered with the MCP server
 
 ---
 
