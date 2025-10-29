@@ -2,7 +2,7 @@ import { string, z } from "zod";
 import axios from 'axios';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as crypto from 'crypto';
-import { getAzureDevOpsConfig } from './configStore.js'; // Corrected import path
+import { getAzureDevOpsConfig, getOpenAIConfig } from './configStore.js'; // Corrected import path
 import { addItemToJIRA } from './jiraUtils.js'; // Import Jira functionality
 
 
@@ -74,6 +74,205 @@ function formatStepsToAzdoXml(naturalLanguageSteps: string): string {
 
   const joinedStepXmls = stepXmls.join('\n  ');
   return `<steps id="0" last="${maxStepId}">\n  ${joinedStepXmls}\n</steps>`;
+}
+
+/**
+ * AI-powered helper function to format natural language steps into Azure DevOps XML using OpenAI.
+ * This function uses GPT-4o-mini to intelligently parse natural language test descriptions
+ * and convert them into properly formatted Azure DevOps test step XML.
+ * 
+ * @param naturalLanguageSteps - Natural language description of test steps (can be free-form text)
+ * @returns A promise that resolves to the Azure DevOps XML format for test steps
+ * @throws Error if OpenAI API call fails or configuration is missing
+ */
+export async function formatStepsToAzdoXmlWithAI(naturalLanguageSteps: string): Promise<string> {
+  function htmlEncode(str: string): string {
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&apos;');
+  }
+
+  try {
+    // Get OpenAI configuration
+    const openAIConfig = await getOpenAIConfig();
+    
+    // Create the prompt for OpenAI to parse test steps
+    const prompt = `You are a test automation expert. Your task is to parse natural language test descriptions and convert them into structured test steps.
+
+**INPUT:**
+${naturalLanguageSteps}
+
+**TASK:**
+Parse the above text and identify individual test steps. For each step, determine if it is:
+1. **ActionStep**: A step that describes an action to perform (e.g., "Click login button", "Navigate to homepage", "Enter username")
+2. **ValidateStep**: A step that describes a validation or expected result (e.g., "Verify user is logged in", "Check that error message appears", "Expected: Dashboard loads successfully")
+
+**OUTPUT FORMAT:**
+You MUST respond with ONLY a single, valid JSON object. Do not include any introductory text, markdown formatting, or explanations outside of the JSON structure.
+
+The JSON object must adhere to this exact schema:
+{
+  "steps": [
+    {
+      "type": "ActionStep" | "ValidateStep",
+      "action": "string - The action to perform (for ActionStep) or validation description (for ValidateStep)",
+      "expected": "string - The expected result (only for ValidateStep, otherwise empty string)"
+    }
+  ]
+}
+
+**RULES:**
+- If a step contains verification keywords (verify, check, ensure, validate, confirm, expected, should) it's likely a ValidateStep
+- For ValidateStep, try to separate the action being validated from the expected outcome
+- If you can't clearly determine the expected outcome for a ValidateStep, use "Result is as expected."
+- Keep steps concise and clear
+- Preserve technical terms and specific values from the input
+- If the input is very short or contains only one concept, create at least one step
+
+**EXAMPLE INPUT:**
+Navigate to login page
+Enter valid credentials
+Click submit button
+Verify successful login
+Expected: User dashboard is displayed
+
+**EXAMPLE OUTPUT:**
+{
+  "steps": [
+    {
+      "type": "ActionStep",
+      "action": "Navigate to login page",
+      "expected": ""
+    },
+    {
+      "type": "ActionStep",
+      "action": "Enter valid credentials",
+      "expected": ""
+    },
+    {
+      "type": "ActionStep",
+      "action": "Click submit button",
+      "expected": ""
+    },
+    {
+      "type": "ValidateStep",
+      "action": "Verify successful login",
+      "expected": "User is logged in successfully"
+    },
+    {
+      "type": "ValidateStep",
+      "action": "Check user dashboard",
+      "expected": "User dashboard is displayed"
+    }
+  ]
+}`;
+
+    // Call OpenAI API
+    console.log('Calling OpenAI API to parse test steps...');
+    const response = await fetch(`${openAIConfig.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIConfig.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'azure-gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a test automation expert specializing in converting natural language test descriptions into structured test steps for Azure DevOps.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.2, // Low temperature for consistent parsing
+        max_tokens: 2000
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
+    const responseData = await response.json();
+    
+    if (!responseData.choices || responseData.choices.length === 0) {
+      throw new Error('No response from OpenAI API');
+    }
+
+    const content = responseData.choices[0].message.content;
+    console.log('OpenAI response received:', content);
+    
+    // Parse the JSON response from OpenAI
+    let parsedSteps;
+    try {
+      // Try to extract JSON from the response in case it's wrapped in code blocks
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      parsedSteps = JSON.parse(jsonString);
+    } catch (parseError) {
+      throw new Error(`Failed to parse OpenAI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}. Response: ${content}`);
+    }
+
+    // Validate the response structure
+    if (!parsedSteps.steps || !Array.isArray(parsedSteps.steps) || parsedSteps.steps.length === 0) {
+      throw new Error('Invalid response structure from OpenAI: missing or empty steps array');
+    }
+
+    // Convert parsed steps into Azure DevOps XML format
+    let stepIdCounter = 1;
+    const stepXmls: string[] = [];
+    let maxStepId = 0;
+
+    for (const step of parsedSteps.steps) {
+      const currentStepId = stepIdCounter++;
+      if (currentStepId > maxStepId) {
+        maxStepId = currentStepId;
+      }
+
+      let stepXml = '';
+      const encodedAction = htmlEncode(step.action || '');
+      
+      if (step.type === 'ValidateStep') {
+        const expectedPart = htmlEncode(step.expected && step.expected.trim() ? step.expected : 'Result is as expected.');
+        
+        stepXml = 
+`<step id="${currentStepId}" type="ValidateStep">
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;${encodedAction}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;${expectedPart}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <description/>
+</step>`;
+      } else {
+        stepXml = 
+`<step id="${currentStepId}" type="ActionStep">
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;${encodedAction}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;&lt;BR/&gt;&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>
+  <description/>
+</step>`;
+      }
+      stepXmls.push(stepXml);
+    }
+
+    if (stepXmls.length === 0) {
+      return "<steps id=\"0\" last=\"0\"></steps>";
+    }
+
+    const joinedStepXmls = stepXmls.join('\n  ');
+    const result = `<steps id="0" last="${maxStepId}">\n  ${joinedStepXmls}\n</steps>`;
+    
+    console.log(`Successfully generated Azure DevOps XML for ${stepXmls.length} steps`);
+    return result;
+
+  } catch (error) {
+    console.error('Error in formatStepsToAzdoXmlWithAI:', error);
+    // If AI parsing fails, fall back to the original rule-based parser
+    console.warn('Falling back to rule-based step parser due to AI error');
+    return formatStepsToAzdoXml(naturalLanguageSteps);
+  }
 }
 
 /**
@@ -461,7 +660,7 @@ export function registerTestCaseTool(server: McpServer) { // Renamed function
       title: z.string().describe("The title of the test case."),
       areaPath: z.string().optional().default("Health").describe("The Area Path for the test case (e.g., 'MyProject\\Area\\Feature'). Defaults to the project name if not specified, but 'Health' is a common default."),
       iterationPath: z.string().optional().default("Health").describe("The Iteration Path for the test case (e.g., 'MyProject\\Sprint 1'). Defaults to the project name if not specified, but 'Health' is a common default."),
-      steps: z.string().optional().default("").describe("Multi-line natural language string describing test steps. Each line can be an action or a validation. For validations, use 'Expected:' to denote the expected outcome."),
+      steps: z.string().optional().default("").describe("Multi-line natural language string describing test steps. Uses AI (azure-gpt-4o-mini) to intelligently parse steps. Falls back to rule-based parsing if AI fails. Requires OPENAI_API_KEY and OPENAI_API_BASE_URL environment variables for AI parsing."),
       priority: z.number().optional().default(2).describe("Priority of the test case (1=High, 2=Medium, 3=Low, 4=Very Low). Defaults to 2."),
       assignedTo: z.string().optional().describe("The unique name or email of the user to assign the test case to (e.g., 'user@example.com'). Optional."),
       state: z.string().optional().default("Design").describe("The initial state of the test case (e.g., 'Design', 'Ready'). Defaults to 'Design'."),
@@ -487,7 +686,8 @@ export function registerTestCaseTool(server: McpServer) { // Renamed function
 
       const apiUrl = `https://dev.azure.com/${organization}/${projectName}/_apis/wit/workitems/$Test%20Case?api-version=7.1-preview.3`;
         
-      const formattedStepsXml = formatStepsToAzdoXml(steps);
+      // Use AI-powered parser (with automatic fallback to rule-based if AI fails)
+      const formattedStepsXml = await formatStepsToAzdoXmlWithAI(steps);
 
       const requestBody: any[] = [
         {

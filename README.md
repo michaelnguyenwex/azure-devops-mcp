@@ -7,6 +7,7 @@
 *   **Azure DevOps Integration:**
     *   Fetch work item details
     *   Create new test cases with detailed steps, priority, and assignments
+    *   **AI-powered test step parser** - Convert natural language to structured test steps using GPT-4o-mini
     *   Optionally create child test suites under a parent plan/suite when creating test cases
     *   Update test cases with automation details
     *   Create or retrieve static test suites
@@ -99,6 +100,13 @@ This tool requires the following environment variables to be set to authenticate
     - Required permissions: `repo` (for private repos) or `public_repo` (for public repos)
     - Used for automated error triage to fetch commit history and analyze potential root causes
 
+**OpenAI (recommended - used by default for AI-powered test step parsing):**
+*   `OPENAI_API_KEY`: Your OpenAI API key
+*   `OPENAI_API_BASE_URL`: OpenAI API endpoint URL (e.g., "https://api.openai.com/v1")
+    - Used by default for AI-powered natural language parsing of test steps
+    - Model used: `azure-gpt-4o-mini` (cost-effective and fast)
+    - Automatically falls back to rule-based parsing if not configured
+
 You can set these variables in your shell environment or by creating a `.env` file in the root of this project with the following format:
 
 ```env
@@ -113,11 +121,15 @@ JIRA_API_BASE_URL=https://your-domain.atlassian.net
 
 # Splunk (Optional)
 SPLUNK_URL=https://your-splunk.com:8089
+SPLUNK_TOKEN=YourSplunkToken
+VERIFY_SSL=false
 
 # GitHub (Optional - for error triage features)  
 GITHUB_TOKEN=your_github_personal_access_token
-SPLUNK_TOKEN=YourSplunkToken
-VERIFY_SSL=false
+
+# OpenAI (Optional - for AI-powered test step parsing)
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_API_BASE_URL=https://api.openai.com/v1
 ```
 
 When used as an MCP server, these environment variables can also be passed via the MCP host's configuration.
@@ -148,12 +160,12 @@ The following tools are exposed by this MCP server:
         *   `itemId` (string): The ID of the work item to fetch (either AZDO or JIRA)
 
 2.  **`create-testcase`**
-    *   Description: Creates a new Test Case work item, optionally creates a new test suite, places the test case under the test suite in Azure DevOps, and can optionally link it to a JIRA issue.
+    *   Description: Creates a new Test Case work item, optionally creates a new test suite, places the test case under the test suite in Azure DevOps, and can optionally link it to a JIRA issue. Uses AI-powered parsing by default with automatic fallback to rule-based parsing.
     *   Parameters:
         *   `title` (string): The title of the test case.
         *   `areaPath` (string, optional): The Area Path for the test case.
         *   `iterationPath` (string, optional): The Iteration Path for the test case.
-        *   `steps` (string, optional): Multi-line natural language string describing test steps.
+        *   `steps` (string, optional): Multi-line natural language string describing test steps. AI parsing is used automatically.
         *   `priority` (number, optional): Priority of the test case (1-4).
         *   `assignedTo` (string, optional): User to assign the test case to.
         *   `state` (string, optional): Initial state (e.g., "Design").
@@ -281,6 +293,15 @@ await mcp.call("create-testcase", {
     parentPlanId: 123,
     parentSuiteId: 456,
     jiraWorkItemId: "PROJ-789"
+});
+
+// Create a test case with natural language (AI parsing is automatic)
+await mcp.call("create-testcase", {
+    title: "E2E shopping cart test",
+    steps: "As a user, I want to test the shopping cart. Browse products, add 3 items to cart. Proceed to checkout and verify all items are listed with correct prices. Complete purchase and ensure confirmation email is sent.",
+    priority: 1,
+    parentPlanId: 123,
+    parentSuiteId: 456
 });
 
 // Add existing test cases to a test suite
