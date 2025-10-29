@@ -26,20 +26,20 @@ Create an MCP function to automatically generate Azure DevOps stories from GitHu
 
 ## 2. Implement OpenAI User Request Parser
 
-- [ ] Create file `src/devops/requestParser.ts`
-- [ ] Import `getOpenAIConfig` function from the appropriate config file
-- [ ] Create function `parseUserRequest(userRequest: string): Promise<ParsedUserRequest>`
-  - [ ] Build OpenAI prompt that instructs to extract mode and PR URL from user input
-  - [ ] Include examples in the prompt:
+- [x] Create file `src/devops/requestParser.ts`
+- [x] Import `getOpenAIConfig` function from the appropriate config file
+- [x] Create function `parseUserRequest(userRequest: string): Promise<ParsedUserRequest>`
+  - [x] Build OpenAI prompt that instructs to extract mode and PR URL from user input
+  - [x] Include examples in the prompt:
     - "create ff [URL]" → mode: "CreateFF"
     - "remove ff [URL]" → mode: "RemoveFF"
     - "run pipeline [URL]" → mode: "Pipeline"
-  - [ ] Call OpenAI API with model `azure-gpt-4o-mini`
-  - [ ] Parse JSON response into `ParsedUserRequest` object
-  - [ ] Add error handling for invalid JSON responses
-  - [ ] Add validation that mode is one of the three expected values
-  - [ ] Add validation that PR URL is present and looks like a GitHub URL
-- [ ] Export the function
+  - [x] Call OpenAI API with model `azure-gpt-4o-mini`
+  - [x] Parse JSON response into `ParsedUserRequest` object
+  - [x] Add error handling for invalid JSON responses
+  - [x] Add validation that mode is one of the three expected values
+  - [x] Add validation that PR URL is present and looks like a GitHub URL
+- [x] Export the function
 
 ---
 
