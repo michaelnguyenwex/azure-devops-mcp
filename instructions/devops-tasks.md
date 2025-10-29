@@ -45,17 +45,17 @@ Create an MCP function to automatically generate Azure DevOps stories from GitHu
 
 ## 3. Implement Date Mapping Utility
 
-- [ ] Create file `src/devops/dateMapper.ts`
-- [ ] Create function `loadDateMappings(): Record<string, string>`
-  - [ ] Import and parse the `mappingDates.json` file
-  - [ ] Return the mapping object
-- [ ] Create function `getTargetDate(prodDeployVersion: string): string | null`
-  - [ ] Load date mappings
-  - [ ] Look up the production deployment version in the mappings
-  - [ ] Return the corresponding UAT deploy date
-  - [ ] Return null if not found
-  - [ ] Add logging for debugging purposes
-- [ ] Export both functions
+- [x] Create file `src/devops/dateMapper.ts`
+- [x] Create function `loadDateMappings(): Record<string, string>`
+  - [x] Import and parse the `mappingDates.json` file
+  - [x] Return the mapping object
+- [x] Create function `getTargetDate(prodDeployVersion: string): string | null`
+  - [x] Load date mappings
+  - [x] Look up the production deployment version in the mappings
+  - [x] Return the corresponding UAT deploy date
+  - [x] Return null if not found
+  - [x] Add logging for debugging purposes
+- [x] Export both functions
 
 ---
 
