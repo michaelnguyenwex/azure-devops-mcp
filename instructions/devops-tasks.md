@@ -110,21 +110,21 @@ Create an MCP function to automatically generate Azure DevOps stories from GitHu
 
 ## 6. Implement Pipeline Info Retrieval
 
-- [ ] Create file `src/devops/pipelineService.ts`
-- [ ] Import `getAllPipelines` from azureDevOpsClient
-- [ ] Create function `getPipelineInfo(pipelineName: string): Promise<PipelineInfo | null>`
-  - [ ] Call `getAllPipelines()` to get all pipelines
-  - [ ] Search through pipelines array to find one where `name === pipelineName`
-  - [ ] If found:
-    - [ ] Extract pipeline `id` from the object
-    - [ ] Alternatively, extract from `_links.web.href` using regex to find `definitionId=(\d+)`
-    - [ ] Build URL: `https://dev.azure.com/WEXHealthTech/Health/_build?definitionId=${pipelineId}`
-    - [ ] Return `PipelineInfo` object with id, name, and url
-  - [ ] If not found:
-    - [ ] Log warning message
-    - [ ] Return null
-  - [ ] Add error handling
-- [ ] Export the function
+- [x] Create file `src/devops/pipelineService.ts`
+- [x] Import `getAllPipelines` from azureDevOpsClient
+- [x] Create function `getPipelineInfo(pipelineName: string): Promise<PipelineInfo | null>`
+  - [x] Call `getAllPipelines()` to get all pipelines
+  - [x] Search through pipelines array to find one where `name === pipelineName`
+  - [x] If found:
+    - [x] Extract pipeline `id` from the object
+    - [x] Alternatively, extract from `_links.web.href` using regex to find `definitionId=(\d+)`
+    - [x] Build URL: `https://dev.azure.com/WEXHealthTech/Health/_build?definitionId=${pipelineId}`
+    - [x] Return `PipelineInfo` object with id, name, and url
+  - [x] If not found:
+    - [x] Log warning message
+    - [x] Return null
+  - [x] Add error handling
+- [x] Export the function
 
 ---
 
