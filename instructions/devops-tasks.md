@@ -130,68 +130,68 @@ Create an MCP function to automatically generate Azure DevOps stories from GitHu
 
 ## 7. Implement Story Builder for CreateFF Mode
 
-- [ ] Create file `src/devops/storyBuilders.ts`
-- [ ] Create function `buildCreateFFStory(appName: string, ffName: string, month: string, target: string, prodDeploy: string): DevOpsStoryFields`
-  - [ ] Build title: `[${month}] Add ${ffName} FF`
-  - [ ] Build description HTML:
-    - [ ] Use template: `<div><div>Context: FeatureFlags<br> </div><div>Scope: ${appName} </div><div>Name: ${ffName} </div><div>Value: true</div> </div>`
-  - [ ] Build tags: `FeatureFlags; Scope:${appName}; yContext:FeatureFlags; zKey:${ffName}`
-  - [ ] Return DevOpsStoryFields object with:
-    - [ ] `System.AreaPath`: "Health"
-    - [ ] `System.TeamProject`: "Health"
-    - [ ] `System.IterationPath`: "Health"
-    - [ ] `System.WorkItemType`: "DevOps Story"
-    - [ ] `System.State`: "New"
-    - [ ] `System.Reason`: "Moved to state New"
-    - [ ] `System.Title`: constructed title
-    - [ ] `Custom.DesiredDate`: target date
-    - [ ] `Custom.ImpactedEnvironments`: "UAT; PROD; TRN;"
-    - [ ] `Custom.ProdDeployment`: prodDeploy
-    - [ ] `System.Description`: constructed description HTML
-    - [ ] `System.Tags`: constructed tags
-- [ ] Export the function
+- [x] Create file `src/devops/storyBuilders.ts`
+- [x] Create function `buildCreateFFStory(appName: string, ffName: string, month: string, target: string, prodDeploy: string): DevOpsStoryFields`
+  - [x] Build title: `[${month}] Add ${ffName} FF`
+  - [x] Build description HTML:
+    - [x] Use template: `<div><div>Context: FeatureFlags<br> </div><div>Scope: ${appName} </div><div>Name: ${ffName} </div><div>Value: true</div> </div>`
+  - [x] Build tags: `FeatureFlags; Scope:${appName}; yContext:FeatureFlags; zKey:${ffName}`
+  - [x] Return DevOpsStoryFields object with:
+    - [x] `System.AreaPath`: "Health"
+    - [x] `System.TeamProject`: "Health"
+    - [x] `System.IterationPath`: "Health"
+    - [x] `System.WorkItemType`: "DevOps Story"
+    - [x] `System.State`: "New"
+    - [x] `System.Reason`: "Moved to state New"
+    - [x] `System.Title`: constructed title
+    - [x] `Custom.DesiredDate`: target date
+    - [x] `Custom.ImpactedEnvironments`: "UAT; PROD; TRN;"
+    - [x] `Custom.ProdDeployment`: prodDeploy
+    - [x] `System.Description`: constructed description HTML
+    - [x] `System.Tags`: constructed tags
+- [x] Export the function
 
 ---
 
 ## 8. Implement Story Builder for RemoveFF Mode
 
-- [ ] In file `src/devops/storyBuilders.ts`
-- [ ] Create function `buildRemoveFFStory(appName: string, ffName: string, month: string, target: string, prodDeploy: string): DevOpsStoryFields`
-  - [ ] Build title: `[${month}] Remove ${ffName} FF`
-  - [ ] Build description HTML:
-    - [ ] Use template: `<div><div>Context: Remove FeatureFlags<br> </div><div>Scope: ${appName} </div><div>Name: ${ffName} </div></div>`
-  - [ ] Build tags: `FeatureFlags; Scope:${appName}; yContext:FeatureFlags; zKey:${ffName}`
-  - [ ] Return DevOpsStoryFields object with same structure as CreateFF but:
-    - [ ] Different title (Remove instead of Add)
-    - [ ] Different description (Remove FeatureFlags context)
-    - [ ] Same tags structure
-    - [ ] All other fields identical to CreateFF
-- [ ] Export the function
+- [x] In file `src/devops/storyBuilders.ts`
+- [x] Create function `buildRemoveFFStory(appName: string, ffName: string, month: string, target: string, prodDeploy: string): DevOpsStoryFields`
+  - [x] Build title: `[${month}] Remove ${ffName} FF`
+  - [x] Build description HTML:
+    - [x] Use template: `<div><div>Context: Remove FeatureFlags<br> </div><div>Scope: ${appName} </div><div>Name: ${ffName} </div></div>`
+  - [x] Build tags: `FeatureFlags; Scope:${appName}; yContext:FeatureFlags; zKey:${ffName}`
+  - [x] Return DevOpsStoryFields object with same structure as CreateFF but:
+    - [x] Different title (Remove instead of Add)
+    - [x] Different description (Remove FeatureFlags context)
+    - [x] Same tags structure
+    - [x] All other fields identical to CreateFF
+- [x] Export the function
 
 ---
 
 ## 9. Implement Story Builder for Pipeline Mode
 
-- [ ] In file `src/devops/storyBuilders.ts`
-- [ ] Create function `buildPipelineStory(appName: string, pipelineName: string, pipelineUrl: string, month: string, target: string, prodDeploy: string): DevOpsStoryFields`
-  - [ ] Build title: `[${month}] ${appName} Run Pipeline`
-  - [ ] Build description HTML:
-    - [ ] Use template: `<div><div>Context: Run pipeline:<br> </div><div>Pipeline Name: ${pipelineName}<br> </div><div>Pipeline URL: ${pipelineUrl}<br> </div></div>`
-  - [ ] Build tags: `Pipeline`
-  - [ ] Return DevOpsStoryFields object with:
-    - [ ] `System.AreaPath`: "Health"
-    - [ ] `System.TeamProject`: "Health"
-    - [ ] `System.IterationPath`: "Health"
-    - [ ] `System.WorkItemType`: "DevOps Story"
-    - [ ] `System.State`: "New"
-    - [ ] `System.Reason`: "Moved to state New"
-    - [ ] `System.Title`: constructed title
-    - [ ] `Custom.DesiredDate`: target date
-    - [ ] `Custom.ImpactedEnvironments`: "UAT; PROD; TRN;"
-    - [ ] `Custom.ProdDeployment`: prodDeploy
-    - [ ] `System.Description`: constructed description HTML
-    - [ ] `System.Tags`: "Pipeline"
-- [ ] Export the function
+- [x] In file `src/devops/storyBuilders.ts`
+- [x] Create function `buildPipelineStory(appName: string, pipelineName: string, pipelineUrl: string, month: string, target: string, prodDeploy: string): DevOpsStoryFields`
+  - [x] Build title: `[${month}] ${appName} Run Pipeline`
+  - [x] Build description HTML:
+    - [x] Use template: `<div><div>Context: Run pipeline:<br> </div><div>Pipeline Name: ${pipelineName}<br> </div><div>Pipeline URL: ${pipelineUrl}<br> </div></div>`
+  - [x] Build tags: `Pipeline`
+  - [x] Return DevOpsStoryFields object with:
+    - [x] `System.AreaPath`: "Health"
+    - [x] `System.TeamProject`: "Health"
+    - [x] `System.IterationPath`: "Health"
+    - [x] `System.WorkItemType`: "DevOps Story"
+    - [x] `System.State`: "New"
+    - [x] `System.Reason`: "Moved to state New"
+    - [x] `System.Title`: constructed title
+    - [x] `Custom.DesiredDate`: target date
+    - [x] `Custom.ImpactedEnvironments`: "UAT; PROD; TRN;"
+    - [x] `Custom.ProdDeployment`: prodDeploy
+    - [x] `System.Description`: constructed description HTML
+    - [x] `System.Tags`: "Pipeline"
+- [x] Export the function
 
 ---
 
