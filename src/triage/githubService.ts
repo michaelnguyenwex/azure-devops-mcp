@@ -402,6 +402,7 @@ export class GitHubService {
     configRepoName: string = 'health-benefits-app-config',
     branch: string = 'main'
   ): Promise<{
+    pipeLineName: string;
     appName: string;
     repoName: string;
     configPath: string;
@@ -450,6 +451,8 @@ export class GitHubService {
         prInfo.repo + '-az-cd'  // Just add -az-cd suffix
       ];
 
+      const pipeLineName =  prInfo.repo.replace(/^health-/, '') + '-az-cd';
+
       let matchingFolder: string | undefined;
       for (const name of possibleNames) {
         matchingFolder = directories.find(dir => dir === name);
@@ -493,6 +496,7 @@ export class GitHubService {
       console.log(`✅ Found AppName: ${appName}`);
 
       return {
+        pipeLineName: pipeLineName,
         appName: appName,
         repoName: prInfo.repo,
         configPath: configPath,
