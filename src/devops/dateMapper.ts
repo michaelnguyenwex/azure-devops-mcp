@@ -1,29 +1,41 @@
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+/**
+ * Date mappings for production deployment versions to UAT deploy dates
+ * Maps production deployment versions to UAT deploy dates
+ */
+const DATE_MAPPINGS: Record<string, string> = {
+  "2026.02": "2/10/2026",
+  "2026.Feb": "2/10/2026",
+  "2026.03": "3/10/2026",
+  "2026.Mar": "3/10/2026",
+  "2026.04": "4/7/2026",
+  "2026.Apr": "4/7/2026",
+  "2026.05": "5/5/2026",
+  "2026.May": "5/5/2026",
+  "2026.06": "6/2/2026",
+  "2026.Jun": "6/2/2026",
+  "2026.07": "6/30/2026",
+  "2026.Jul": "6/30/2026",
+  "2026.08": "7/28/2026",
+  "2026.Aug": "7/28/2026",
+  "2026.09": "8/25/2026",
+  "2026.Sep": "8/25/2026",
+  "2026.10": "9/22/2026",
+  "2026.Oct": "9/22/2026",
+  "2026.11": "10/20/2026",
+  "2026.Nov": "10/20/2026",
+  "2026.12": "11/17/2026",
+  "2026.Dec": "11/17/2026"
+};
 
 /**
- * Loads the date mappings from mappingDates.json
+ * Gets the date mappings
  * Maps production deployment versions to UAT deploy dates
  * 
  * @returns Record mapping production deployment version strings to UAT deploy dates
  */
 export function loadDateMappings(): Record<string, string> {
-  try {
-    const mappingPath = join(__dirname, 'mappingDates.json');
-    const fileContents = readFileSync(mappingPath, 'utf-8');
-    const mappings = JSON.parse(fileContents);
-    
-    console.log(`📅 Loaded ${Object.keys(mappings).length} date mappings`);
-    
-    return mappings;
-  } catch (error) {
-    console.error('❌ Failed to load date mappings:', error);
-    throw new Error(`Failed to load date mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  console.log(`📅 Loaded ${Object.keys(DATE_MAPPINGS).length} date mappings`);
+  return DATE_MAPPINGS;
 }
 
 /**

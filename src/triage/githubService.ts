@@ -482,7 +482,34 @@ export class GitHubService {
       }
 
       // Step 6: Parse JSON and extract AppName
-      const config = JSON.parse(fileContents);
+      // Try to parse as JSON, handling JSONC (JSON with comments)
+      let config: any;
+      try {
+        config = JSON.parse(fileContents);
+      } catch (jsonError) {
+        // Try to clean up common JSON issues (comments, trailing commas)
+        console.log('   ⚠️  Initial JSON parse failed, trying to clean up...');
+        try {
+          const cleanedJson = fileContents
+            .replace(/\/\/.*$/gm, '') // Remove single-line comments
+            .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+            .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+            .replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
+          config = JSON.parse(cleanedJson);
+          console.log('   ✅ Successfully parsed cleaned JSON');
+        } catch (cleanError) {
+          console.error('   ❌ Failed to parse even after cleanup:', cleanError);
+          // If JSON parsing completely fails, try regex extraction as last resort
+          console.log('   🔍 Attempting regex extraction of AppName...');
+          const appNameMatch = fileContents.match(/"AppName"\s*:\s*"([^"]+)"/);
+          if (appNameMatch) {
+            console.log(`   ✅ Found AppName via regex: ${appNameMatch[1]}`);
+            config = { AppName: appNameMatch[1] };
+          } else {
+            throw jsonError; // Throw original error
+          }
+        }
+      }
       
       // AppName can be at root level or nested in HostResources
       const appName = config.AppName || config.HostResources?.AppName;
@@ -636,19 +663,62 @@ Examples:
         
         target = extracted.featureDeployment;
         
+        // Month number to full name mapping
+        const monthMap: Record<string, string> = {
+          '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+          '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+          '09': 'September', '10': 'October', '11': 'November', '12': 'December',
+          'Jan': 'January', 'Feb': 'February', 'Mar': 'March', 'Apr': 'April',
+          'May': 'May', 'Jun': 'June', 'Jul': 'July', 'Aug': 'August',
+          'Sep': 'September', 'Oct': 'October', 'Nov': 'November', 'Dec': 'December'
+        };
+        
         // Extract month from various formats
-        // "2026.Feb (Feb)" → month = "Feb"
-        // "2026.02" → month = "02"
-        const monthMatch = extracted.featureDeployment.match(/\(([A-Za-z]+)\)|\.([A-Za-z]+)|\.(\d{2})/);
-        if (monthMatch) {
-          month = monthMatch[1] || monthMatch[2] || monthMatch[3];
-          console.log(`📅 Extracted month: ${month}`);
+        // "2026.02 February" → month = "February"
+        // "2026.Feb (Feb)" → month = "February"
+        // "2026.02" → month = "February"
+        
+        // First, try to find full month name at the end
+        const fullMonthMatch = extracted.featureDeployment.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/i);
+        if (fullMonthMatch) {
+          month = fullMonthMatch[1].charAt(0).toUpperCase() + fullMonthMatch[1].slice(1).toLowerCase();
+          console.log(`📅 Extracted month (full name): ${month}`);
+        } else {
+          // Try to extract abbreviated or numeric month
+          const monthMatch = extracted.featureDeployment.match(/\(([A-Za-z]+)\)|\.([A-Za-z]+)|\.(\d{2})/);
+          if (monthMatch) {
+            const extractedMonth = monthMatch[1] || monthMatch[2] || monthMatch[3];
+            // Convert to full month name if possible
+            month = monthMap[extractedMonth] || extractedMonth;
+            console.log(`📅 Extracted month: ${month}`);
+          }
         }
         
-        // Extract production deployment version
+        // Extract production deployment version and ensure abbreviated format
         // "2026.Feb (Feb)" → prodDeploy = "2026.Feb"
-        // Remove anything in parentheses and trim
-        prodDeploy = extracted.featureDeployment.replace(/\s*\(.*?\)\s*/, '').trim();
+        // "2026.02 February" → prodDeploy = "2026.Feb"
+        // "2026.02" → prodDeploy = "2026.Feb"
+        prodDeploy = extracted.featureDeployment
+          .replace(/\s*\(.*?\)\s*/, '') // Remove parentheses
+          .replace(/\s+(January|February|March|April|May|June|July|August|September|October|November|December)$/i, '') // Remove trailing month name
+          .trim();
+        
+        // Convert numeric month format to abbreviated format (2026.02 → 2026.Feb)
+        const numericMonthMatch = prodDeploy.match(/^(\d{4})\.(\d{2})$/);
+        if (numericMonthMatch) {
+          const year = numericMonthMatch[1];
+          const monthNum = numericMonthMatch[2];
+          const monthAbbrevMap: Record<string, string> = {
+            '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+            '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+            '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
+          };
+          if (monthAbbrevMap[monthNum]) {
+            prodDeploy = `${year}.${monthAbbrevMap[monthNum]}`;
+            console.log(`📅 Converted numeric format to: ${prodDeploy}`);
+          }
+        }
+        
         console.log(`📅 Production deployment: ${prodDeploy}`);
         
         // Get target date using date mapper
