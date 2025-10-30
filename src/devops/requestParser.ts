@@ -18,10 +18,12 @@ export async function parseUserRequest(userRequest: string): Promise<ParsedUserR
     
     const prompt = `You are a request parser. Extract the mode and GitHub PR URL from the user's request.
 
+IMPORTANT: Check for "pipeline" keyword FIRST before checking other keywords.
+
 Mode can be one of:
-- "CreateFF" - for creating a feature flag (keywords: create, add, new)
-- "RemoveFF" - for removing a feature flag (keywords: remove, delete, cleanup)
-- "Pipeline" - for running a pipeline (keywords: run, execute, pipeline)
+- "Pipeline" - if request mentions "pipeline" anywhere (keywords: pipeline, run pipeline, create pipeline, execute pipeline)
+- "CreateFF" - for creating a feature flag (keywords: create ff, add ff, new ff, create feature flag)
+- "RemoveFF" - for removing a feature flag (keywords: remove ff, delete ff, cleanup ff, remove feature flag)
 
 Return JSON only, no other text. Format:
 {
@@ -33,6 +35,7 @@ Examples:
 - "create ff https://github.com/owner/repo/pull/123" → {"mode":"CreateFF","pr":"https://github.com/owner/repo/pull/123"}
 - "remove ff https://github.com/owner/repo/pull/456" → {"mode":"RemoveFF","pr":"https://github.com/owner/repo/pull/456"}
 - "run pipeline https://github.com/owner/repo/pull/789" → {"mode":"Pipeline","pr":"https://github.com/owner/repo/pull/789"}
+- "create pipeline for https://github.com/owner/repo/pull/789" → {"mode":"Pipeline","pr":"https://github.com/owner/repo/pull/789"}
 
 User request: "${userRequest}"`;
 

@@ -13,6 +13,19 @@ azure-devops-mcp/
 │   ├── testCaseUtils.ts              # Azure DevOps test case management
 │   ├── jiraUtils.ts                  # JIRA integration utilities
 │   ├── testing.ts                    # Testing utilities
+│   ├── devops/                       # DevOps story creation from GitHub PRs
+│   │   ├── types.ts                  # DevOps-related type definitions
+│   │   ├── create-devops.ts          # Main orchestrator for story creation
+│   │   ├── requestParser.ts          # AI-powered request parsing
+│   │   ├── dateMapper.ts             # Production to UAT date mapping
+│   │   ├── azureDevOpsClient.ts      # Azure DevOps REST API client
+│   │   ├── pipelineService.ts        # Pipeline information retrieval
+│   │   ├── storyBuilders.ts          # Story field construction for each mode
+│   │   ├── mappingDates.json         # Date mapping configuration
+│   │   ├── README.md                 # Detailed documentation
+│   │   └── tests/                    # Test scripts
+│   │       ├── test-create-devops.ts # Integration test script
+│   │       └── README.md             # Test documentation
 │   ├── integrations/
 │   │   └── splunk/                   # Splunk integration (optional)
 │   │       ├── client.ts             # Splunk HTTP client with singleton pattern
@@ -28,7 +41,7 @@ azure-devops-mcp/
 │       ├── triageWorkflow.ts         # Main triage orchestration logic
 │       ├── triageTool.ts             # MCP tool for triage functionality
 │       ├── errorParser.ts            # Error signature generation and grouping
-│       ├── githubService.ts          # GitHub API integration for commit analysis
+│       ├── githubService.ts          # GitHub API integration for commit/PR analysis
 │       ├── commitAnalyzer.ts         # Intelligent commit analysis and scoring
 │       ├── deploymentService.ts      # Deployment information service
 │       ├── jiraFormatter.ts          # Jira ticket formatting and templates
@@ -40,6 +53,8 @@ azure-devops-mcp/
 │
 ├── instructions/                     # Documentation
 │   ├── overview.md                   # This file - project overview
+│   ├── devops-instruction.md         # DevOps story creation guide
+│   ├── devops-tasks.md              # DevOps implementation tasks
 │   ├── jira-fetch.md                 # JIRA integration guide
 │   ├── jirasubtasks.md              # JIRA subtasks documentation
 │   ├── jiraTestCases.md             # JIRA test case linking guide
@@ -105,10 +120,22 @@ azure-devops-mcp/
 - **Commit Scoring**: Relevance-based scoring system for suspected commits using smart matching algorithms
 - **Analysis-Only Tool**: Provides structured investigation insights without modifying systems or creating tickets
 
-### 6. **Main Server (`index.ts`)**
+### 6. **DevOps Story Creation (`devops/`)**
+- **AI-Powered Request Parsing**: Uses OpenAI to understand natural language requests and extract mode and PR URL
+- **PR Analysis**: Automatically extracts feature flag names, deployment dates, and app names from GitHub PR descriptions
+- **Date Mapping**: Converts production deployment versions (2026.02) to UAT dates and abbreviated formats (2026.Feb)
+- **Pipeline Discovery**: Automatically finds and links Azure DevOps pipelines by name
+- **Three Story Types**:
+  - **CreateFF**: Feature flag addition stories with proper tagging and metadata
+  - **RemoveFF**: Feature flag removal stories
+  - **Pipeline**: Pipeline execution stories with pipeline URLs
+- **Robust JSON Parsing**: Handles malformed config files with control character removal and regex fallback
+- **Month Conversion**: Converts numeric months (02) to full names (February) for story titles
+
+### 7. **Main Server (`index.ts`)**
 - **Unified item fetching**: Single `fetch-item` tool that intelligently routes to Azure DevOps (numeric IDs) or JIRA (string IDs)
 - **MCP tool registration**: Exposes all functionality as callable tools for AI assistants
-- **Optional services**: Splunk and GitHub integrations are optional and auto-detected at startup
+- **Optional services**: Splunk, GitHub, and OpenAI integrations are optional and auto-detected at startup
 
 ## Key Features & Workflows
 
@@ -155,17 +182,19 @@ The server exposes these tools to AI assistants:
 | `get-child-test-suites` | Get hierarchical test suite structure |
 | `search_splunk` | Execute SPL queries to search Splunk logs and metrics (optional) |
 | `triage_splunk_error` | Parse raw Splunk JSON data and analyze GitHub commits to identify suspected root causes for production errors (analysis-only, requires GitHub token) |
+| `create-devops` | Automatically create DevOps stories from GitHub PRs for feature flags and pipelines (requires GitHub and OpenAI) |
 
 This architecture enables AI assistants to orchestrate complex test management workflows across multiple platforms while maintaining data consistency, providing rich cross-platform linking capabilities, and offering observability through integrated Splunk search.
 
 ## Integration Architecture
 
-The system integrates four major platforms:
+The system integrates five major platforms:
 
-1. **Azure DevOps** - Core test management and work item tracking
+1. **Azure DevOps** - Core test management, work item tracking, and story creation
 2. **JIRA** - Issue tracking and project management with bidirectional linking
 3. **Splunk** (optional) - Observability, log analysis, and metrics monitoring
-4. **GitHub** (optional) - Code repository analysis for automated error triage
+4. **GitHub** (optional) - Code repository analysis for automated error triage and PR analysis for story creation
+5. **OpenAI** (optional) - AI-powered parsing for test steps, request interpretation, and PR analysis
 
 ### **Automated Error Triage Workflow**
 ```mermaid

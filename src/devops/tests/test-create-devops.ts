@@ -24,19 +24,19 @@ async function runTest() {
   
   // Sample test inputs
   const testCases = [
-    {
-      name: 'Remove Feature Flag',
-      input: 'remove ff https://github.com/wexinc/health-cdh-investment-api/pull/757'
-    },
+    //{
+    //  name: 'Remove Feature Flag',
+    //  input: 'remove ff https://github.com/wexinc/health-cdh-investment-api/pull/757'
+   // },
     // Add more test cases as needed:
     // {
     //   name: 'Create Feature Flag',
     //   input: 'create ff https://github.com/WEXHealthTech/health-cdh-authservice/pull/123'
     // },
-    // {
-    //   name: 'Run Pipeline',
-    //   input: 'run pipeline https://github.com/WEXHealthTech/health-cdh-authservice/pull/789'
-    // }
+    {
+      name: 'Create Pipeline',
+      input: 'create pipeline for https://github.com/wexinc/health-cdh-investment-api/pull/757'
+    }
   ];
   
   // Validate environment variables

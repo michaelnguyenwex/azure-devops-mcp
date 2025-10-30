@@ -8,6 +8,7 @@
     *   Fetch work item details
     *   Create new test cases with detailed steps, priority, and assignments
     *   **AI-powered test step parser** - Convert natural language to structured test steps using GPT-4o-mini
+    *   **AI-powered DevOps story creation** - Automatically create DevOps stories from GitHub PRs for feature flags and pipelines
     *   Optionally create child test suites under a parent plan/suite when creating test cases
     *   Update test cases with automation details
     *   Create or retrieve static test suites
@@ -26,6 +27,7 @@
     *   Automated error triage with GitHub commit analysis
     *   Retrieve recent commits to identify potential root causes
     *   Link Jira tickets to related GitHub pull requests and commits
+    *   Analyze GitHub PRs to extract feature flag and deployment information for DevOps story creation
 *   **Automated Error Triage:**
     *   Analyze production errors from Splunk logs automatically
     *   Generate error signatures to group similar issues
@@ -278,6 +280,36 @@ The following tools are exposed by this MCP server:
         *   Gracefully handles missing GitHub configuration by skipping commit analysis
         *   Results provide comprehensive starting points for manual error investigation and can inform Jira ticket creation
 
+12. **`create-devops`** (Optional - requires GitHub and OpenAI configuration)
+    *   Description: Automatically creates Azure DevOps stories from GitHub Pull Request URLs. Intelligently extracts feature flag names, deployment dates, and application information from PRs using AI.
+    *   Parameters:
+        *   `userRequest` (string): Natural language request with GitHub PR URL. Examples:
+            *   `"create ff https://github.com/owner/repo/pull/123"` - Creates a feature flag story
+            *   `"remove ff https://github.com/owner/repo/pull/456"` - Creates a feature flag removal story
+            *   `"create pipeline for https://github.com/owner/repo/pull/789"` - Creates a pipeline execution story
+    *   Returns:
+        *   Created DevOps story with work item ID and URL
+    *   Features:
+        *   **AI-Powered Request Parsing**: Uses OpenAI to understand natural language requests
+        *   **PR Analysis**: Automatically extracts feature flag names, deployment dates, and app names from PR descriptions
+        *   **Date Mapping**: Converts production deployment versions to UAT dates
+        *   **Pipeline Discovery**: Automatically finds and links Azure DevOps pipelines
+        *   **Three Story Types**:
+            *   **CreateFF**: Creates feature flag addition stories with proper tagging and metadata
+            *   **RemoveFF**: Creates feature flag removal stories
+            *   **Pipeline**: Creates pipeline execution stories with pipeline URLs
+    *   Story Fields:
+        *   Title: `[Month] Add/Remove {FFName} FF` or `[Month] {AppName} Run Pipeline`
+        *   Description: Context-specific with scope, names, and URLs
+        *   Tags: Properly formatted for filtering and organization
+        *   Custom Fields: Desired Date, Impacted Environments, Prod Deployment
+    *   Notes:
+        *   Requires GitHub token (GITHUB_TOKEN or GITHUB_PAT) for PR analysis
+        *   Requires OpenAI API key (OPENAI_API_KEY) for AI-powered parsing
+        *   Automatically handles malformed JSON in config files with fallback parsing
+        *   Converts numeric month formats (2026.02) to abbreviated formats (2026.Feb)
+        *   See `src/devops/README.md` for detailed documentation and troubleshooting
+
 
 ## Example Usage
 
@@ -375,6 +407,30 @@ const quickAnalysis = await mcp.call("triage_splunk_error", {
 // • Key files: SdkApiClient.cs, DocumentIndexProvider.cs, etc.
 // • Key methods: GetShareableUrl, ReadAsJsonAsync, etc.
 // • Suspected commits: Recent changes ranked by relevance
+```
+
+### DevOps Story Creation from GitHub PRs
+```javascript
+// Create feature flag addition story
+await mcp.call("create-devops", {
+    userRequest: "create ff https://github.com/wexinc/health-cdh-investment-api/pull/757"
+});
+// Result: DevOps Story ID 506979
+// Title: [February] Add EnhanceInstrumentExplore372190 FF
+// Tags: FeatureFlags, Scope:WexHealth.CDH.Investment.WebApi
+
+// Create feature flag removal story
+await mcp.call("create-devops", {
+    userRequest: "remove ff https://github.com/wexinc/health-cdh-authservice/pull/123"
+});
+
+// Create pipeline execution story
+await mcp.call("create-devops", {
+    userRequest: "create pipeline for https://github.com/wexinc/health-cdh-investment-api/pull/757"
+});
+// Result: DevOps Story ID 507010
+// Title: [February] WexHealth.CDH.Investment.WebApi Run Pipeline
+// Pipeline: cdh-investment-api-az-cd
 ```
 
 ### Multi-Platform Workflow Example
